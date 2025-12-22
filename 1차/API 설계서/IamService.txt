@@ -1,0 +1,551 @@
+openapi: 3.0.3
+info:
+  title: IAM 서비스 API (Identity & Access Management)
+  description: |
+    관리자 인증 및 시스템 접근 제어를 담당하는 IAM 마이크로서비스 API 명세서입니다.
+    
+    ## 주요 섹션
+    * **1. 인증**: 로그인, 로그아웃, 토큰 갱신, 초기 계정 변경
+    * **2-1. 시스템 관리자 계정(IAM)**: 시스템 관리자(System Administrator) 계정의 CRUD 및 상태 관리
+    * **2-2. 시스템 관리자 역할(IAM)**: 역할(Role) 정보의 CRUD
+    * **2-3. 시스템 관리자 권한(IAM)**: 역할(Permission) 정보의 R
+    * **3-1. 일반 사용자 계정(IAM)**: 일반 사용자(General User) 계정의 CRUD 및 상태 관리(추후 개발 예정)
+    
+    ## 공통 사항
+    * **Authentication**: `/api/admin/**`, `/api/user/**` 경로는 Bearer Token 인증이 필요합니다.
+  version: 1.0.0
+servers:
+  - url: http://localhost:4300
+    description: 로컬 개발 서버
+  - url: https://serverip:4300
+    description: IAM 서비스 API 서버
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
+  schemas:
+    # ----------------------------------------------------------------
+    # 1. Auth Schemas
+    # ----------------------------------------------------------------
+    LoginRequest:
+      type: object
+      required:
+        - userId
+        - password
+      properties:
+        userId:
+          type: string
+          description: "규칙: 한글, 영대소문자, 숫자, 2자리 이상"
+          pattern: '^[a-zA-Z0-9가-힣]{2,}$'
+          example: "admin01"
+        password:
+          type: string
+          description: "규칙: 영대소문자, 숫자, 특수문자(!, @, #, $, %, ^, &, *, (, ), _, +, =, ?, -) 포함 8자리 이상"
+          format: password
+          example: "P@ssword123!"
+
+    SystemAdministratorLoginResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token
+        expiresIn:
+          type: integer
+          description: 토큰 만료 시간 (초 단위)
+        systemAdministratorId:
+          type: string
+          format: uuid
+          description: 시스템 관리자 고유 ID (PK)
+        userId:
+          type: string
+          description: 시스템 관리자 로그인 아이디
+        name:
+          type: string
+          description: 시스템 관리자 이름
+          example: "홍길동"
+        phoneNumber:
+          type: string
+          description: 시스템 관리자 전화번호
+          example: "01000000000"
+        email:
+          type: string
+          description: 시스템 관리자 이메일
+          example: "hongildong@gmail.com"
+        roleId:
+          type: string
+          format: uuid
+          description: 사용자의 역할 ID
+        roleName:
+          type: string
+          description: 역할 이름
+          example: "Super Admin"
+        roles:
+          type: object
+          description: "Key: Role ID, Value: Role Name 형태의 Map"
+          additionalProperties:
+            type: string
+          example:
+            "ESKN123NKE": "Super Admin"
+            "ANDKEAK": "Admin"
+
+    ChangeInitialAccountRequest:
+      type: object
+      required:
+        - userId
+        - oldPassword
+        - newPassword
+      properties:
+        userId:
+          type: string
+          description: 로그인 아이디
+        oldPassword:
+          type: string
+          description: 초기 비밀번호
+          format: password
+        newPassword:
+          type: string
+          description: "새 비밀번호 (규칙: 영대소문자, 숫자, 특수문자(!, @, #, $, %, ^, &, *, (, ), _, +, =, ?, -) 포함 8자리 이상)"
+          format: password
+          pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+=\?-])[A-Za-z\d!@#$%^&*()_+=\?-]{8,}$'
+
+    RefreshResponse:
+      type: object
+      properties:
+        accessToken:
+          type: string
+          description: JWT Access Token
+        expiresIn:
+          type: integer
+          description: 토큰 만료 시간 (초 단위)
+        systemAdministratorId:
+          type: string
+          format: uuid
+          description: 시스템 관리자 고유 ID (PK)
+        userId:
+          type: string
+          description: 시스템 관리자 로그인 아이디
+        name:
+          type: string
+          description: 시스템 관리자 이름
+          example: "홍길동"
+        phoneNumber:
+          type: string
+          description: 시스템 관리자 전화번호
+          example: "01000000000"
+        email:
+          type: string
+          description: 시스템 관리자 이메일
+          example: "hongildong@gmail.com"
+        roleId:
+          type: string
+          format: uuid
+          description: 사용자의 역할 ID
+        roleName:
+          type: string
+          description: 역할 이름
+          example: "Super Admin"
+
+    # ----------------------------------------------------------------
+    # 2. Admin IAM Schemas
+    # ----------------------------------------------------------------
+    SystemAdministrator:
+      type: object
+      description: 시스템 관리자 상세 정보
+      properties:
+        systemAdministratorId:
+          type: string
+          format: uuid
+          description: 시스템 관리자 고유 ID (PK)
+        name:
+          type: string
+          description: 시스템 관리자 이름
+          example: "홍길동"
+        phoneNumber:
+          type: string
+          description: 시스템 관리자 전화번호
+          example: "01000000000"
+        email:
+          type: string
+          description: 시스템 관리자 이메일
+          example: "hongildong@gmail.com"
+        userId:
+          type: string
+          description: 시스템 관리자 로그인 아이디
+          
+        roleId:
+          type: string
+          format: uuid
+          description: 역할 고유 ID (PK)
+        roleName:
+          type: string
+          description: 역할명
+        roleDescription:
+          type: string
+          descripntion: 역할 설명
+        isAdmin:
+          type: string
+          description: "시스템 관리자 여부 (boolean 문자열)"
+        isActive:
+          type: boolean
+          description: 활성화 여부
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+    CreateAdminRequest:
+      type: object
+      required:
+        - userId
+        - password
+        - name
+        - isAdmin
+        - roleId
+      properties:
+        userId:
+          type: string
+          pattern: '^[a-zA-Z0-9가-힣]{2,}$'
+        password:
+          type: string
+          format: password
+          pattern: '^(?=.*[A-Za-z])(?=.*\d)(?=.*[!@#$%^&*()_+=\?-])[A-Za-z\d!@#$%^&*()_+=\?-]{8,}$'
+        name:
+          type: string
+        isAdmin:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+
+    UpdateAdminRequest:
+      type: object
+      properties:
+        name:
+          type: string
+        roleId:
+          type: string
+          format: uuid
+
+    DeleteAdminResponse:
+      type: object
+      properties:
+        systemAdministratorId:
+          type: string
+          format: uuid
+        isSoftDeleted:
+          type: boolean
+          description: 비활성화 여부
+        isHardDeleted:
+          type: boolean
+          description: 완전 삭제 여부
+
+    CheckUsernameResponse:
+      type: object
+      properties:
+        isDuplicated:
+          type: boolean
+          description: "true: 중복됨(사용 불가), false: 사용 가능"
+
+    ResetPasswordRequest:
+      type: object
+      required:
+        - newPassword
+      properties:
+        newPassword:
+          type: string
+          format: password
+
+    # ----------------------------------------------------------------
+    # 3. Role Schemas
+    # ----------------------------------------------------------------
+    Role:
+      type: object
+      properties:
+        roleId:
+          type: string
+          format: uuid
+        name:
+          type: string
+        description:
+          type: string
+        isActive:
+          type: boolean
+        createdAt:
+          type: string
+          format: date-time
+        updatedAt:
+          type: string
+          format: date-time
+
+
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ============================================================
+  # 1-1. 관리자 인증 (/api/auth)
+  # ============================================================
+  /api/auth/login:
+    post:
+      tags: [1-1. Admin Auth]
+      summary: 관리자 로그인
+      description: |
+        - Access Token 발급 및 Refresh Token 쿠키 설정
+        - **최초 로그인 시**: 400 Bad Request와 함께 errorCode: "RESET_REQUIRED" 반환 가능
+      security: [] # 인증 불필요
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginRequest'
+      responses:
+        '200':
+          description: 로그인 성공
+          headers:
+            Set-Cookie:
+              schema:
+                type: string
+                example: refreshToken=abcde12345; HttpOnly; Secure
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+        '400':
+          description: 잘못된 요청 또는 최초 로그인 비밀번호 변경 필요
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  errorCode:
+                    type: string
+                    example: "RESET_REQUIRED"
+                  errorMessage:
+                    type: string
+
+  /api/auth/refresh:
+    post:
+      tags: [1-1. Admin Auth]
+      summary: 관리자 토큰 갱신
+      description: Cookie에 저장된 Refresh Token을 사용하여 Access Token을 갱신합니다.
+      security: [] # 인증 불필요 (쿠키 사용)
+      responses:
+        '200':
+          description: 갱신 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RefreshResponse'
+
+  /api/auth/logout:
+    post:
+      tags: [1-1. Admin Auth]
+      summary: 관리자 로그아웃
+      description: 서버 측 세션 만료 처리 등
+      # 인증 필요 (기본 security 적용)
+      responses:
+        '200':
+          description: 로그아웃 성공
+
+  /api/auth/change-initial-account:
+    post:
+      tags: [1-1. Admin Auth]
+      summary: 관리자 최초 계정 변경
+      description: 최초 생성된 계정의 비밀번호를 강제로 변경합니다.
+      security: [] # 인증 불필요 (명세서 기준)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ChangeInitialAccountRequest'
+      responses:
+        '200':
+          description: 변경 및 자동 로그인 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/LoginResponse'
+
+  # ============================================================
+  # 1-2. 관리자 계정(IAM) (/api/admin/iam)
+  # ============================================================
+  /api/admin/iam/admins:
+    get:
+      tags: [1-2. Admin IAM]
+      summary: 관리자 목록 조회
+      parameters:
+        - name: isActive
+          in: query
+          schema: { type: boolean }
+        - name: userId
+          in: query
+          schema: { type: string }
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: roleName
+          in: query
+          schema: { type: string }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SystemAdministrator'
+    post:
+      tags: [1-2. Admin IAM]
+      summary: 관리자 생성
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/CreateAdminRequest'
+      responses:
+        '200':
+          description: 생성된 관리자 정보 반환
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAdministrator'
+
+  /api/admin/iam/admins/{id}:
+    get:
+      tags: [1-2. Admin IAM]
+      summary: 관리자 상세 조회
+      parameters:
+        - name: id
+          in: path
+          required: true
+          description: systemAdministratorId (UUID)
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAdministrator'
+    put:
+      tags: [1-2. Admin IAM]
+      summary: 관리자 정보 수정
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/UpdateAdminRequest'
+      responses:
+        '200':
+          description: 수정 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemAdministrator'
+    delete:
+      tags: [1-2. Admin IAM]
+      summary: 관리자 정보 삭제
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 삭제 성공 (Soft or Hard Delete)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeleteAdminResponse'
+
+  /api/admin/iam/admins/check-username:
+    get:
+      tags: [1-2. Admin IAM]
+      summary: 아이디 중복 확인
+      parameters:
+        - name: userId
+          in: query
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: 확인 완료
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CheckUsernameResponse'
+
+  /api/admin/iam/admins/{id}/reset-password:
+    post:
+      tags: [1-2. Admin IAM]
+      summary: 비밀번호 강제 재설정
+      description: (폐쇄망 방식) 권한을 가진 관리자가 특정 관리자의 비밀번호를 강제 재설정
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ResetPasswordRequest'
+      responses:
+        '200':
+          description: 재설정 성공
+
+  # ============================================================
+  # 1-3. 관리자 권한(IAM) (/api/admin/iam)
+  # ============================================================
+  /api/admin/iam/roles:
+    get:
+      tags: [1-3. Admin Roles]
+      summary: 역할(Role) 목록 조회
+      description: Super Admin, Admin, Viewer 값을 받아서 하위 Role만 반환
+      parameters:
+        - name: name
+          in: query
+          schema: { type: string }
+        - name: roleId
+          in: query
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Role'
+
+  /api/admin/iam/roles/{id}:
+    get:
+      tags: [1-3. Admin Roles]
+      summary: 역할 상세 조회 (할당된 권한 포함)
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: string, format: uuid }
+      responses:
+        '200':
+          description: 성공
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Role'
