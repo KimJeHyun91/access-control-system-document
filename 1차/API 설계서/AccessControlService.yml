@@ -3,10 +3,20 @@ info:
   title: "Access Control Service API"
   description: |
     출입 제어 서비스(Access Control Service)를 위한 REST API 명세서입니다.<br>
-    PostgreSQL 스키마를 기반으로 작성되었습니다.<br>
-    모든 필드명은 카멜케이스(camelCase)를 사용합니다.<br>
-    **(참고: 인증(401), 권한(403), 서버 오류(500), 잘못된 요청(400) 등 공통 에러는 문서 간소화를 위해 각 API 명세에서 생략되었습니다.)**
-  version: "1.0.0"
+    PostgreSQL 스키마를 기반으로 하며, MSA 아키텍처 환경에서의 독립성과 확장성을 보장합니다.<br>
+
+    ### 🛠 핵심 설계 원칙
+    1. **우선순위 기반 정책 (Priority-Based):** - `access_rules`의 `priority` 필드를 기준으로 권한을 결정합니다.
+       - 동일 우선순위 규칙 간에는 **합집합(Union)** 처리하며, 높은 우선순위 규칙은 하위 규칙을 **무력화(Override)**합니다.
+    2. **공간 및 경로 관리 (Spatial Management):**
+       - **areaId:** 장비가 설치된 물리적 위치(자산 관리/UI 트리용).
+       - **fromAreaId / toAreaId:** 보안 로직용 이동 경로(안티패스백 및 재실 관리용).
+    3. **보안 무결성 (Security & Privacy):**
+       - 개인정보(PII) 및 로그 스냅샷은 AES-256 암호화 처리됩니다.
+       - 로그 테이블의 `updatedAt`이 존재할 경우 비정상적인 데이터 수정 시도로 간주합니다.
+    4. **Multi-tenancy 지원:** `organizationId`를 통한 조직별 데이터 격리를 지원합니다.
+
+  version: "1.0.1"
   contact:
     name: "Jehyun Kim"
 servers:
@@ -1568,7 +1578,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # ==========================================
-  # 4. Access Rules (Priority-Based)
+  # 4. Access Rules (Priority-Based Policy)
   # ==========================================
   /access-rules:
     get:
@@ -1576,7 +1586,7 @@ paths:
       summary: "출입 규칙(Access Rule) 목록 조회"
       description: |
         출입 규칙 목록을 조회합니다.<br>
-        `priority`가 높을수록 강력한 규칙으로 간주됩니다. (High Priority Wins)
+        **우선순위 기반 정책:** `priority`가 높을수록 더 강력한 규칙으로 간주되며, 충돌 시 하위 규칙을 덮어씁니다(Override).
       parameters:
         - name: "organizationId"
           in: "query"
@@ -1586,7 +1596,52 @@ paths:
             format: "uuid"
         - name: "name"
           in: "query"
-          description: "규칙명 검색"
+          description: "규칙명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "규칙 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "priority"
+          in: "query"
+          description: "우선순위 일치 검색"
+          schema:
+            type: "integer"
+        
+        # --- [Items 관련 검색 조건] ---
+        - name: "accessPointId"
+          in: "query"
+          description: "특정 출입문 ID가 포함된 규칙 검색"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "accessPointName"
+          in: "query"
+          description: "특정 출입문 이름(부분 일치)이 포함된 규칙 검색"
+          schema:
+            type: "string"
+        - name: "accessPointGroupId"
+          in: "query"
+          description: "특정 출입문 그룹 ID가 포함된 규칙 검색"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "accessPointGroupName"
+          in: "query"
+          description: "특정 출입문 그룹 이름(부분 일치)이 포함된 규칙 검색"
+          schema:
+            type: "string"
+        - name: "timeScheduleId"
+          in: "query"
+          description: "특정 시간 스케줄 ID가 포함된 규칙 검색"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "timeScheduleName"
+          in: "query"
+          description: "특정 시간 스케줄 이름(부분 일치)이 포함된 규칙 검색"
           schema:
             type: "string"
         - name: "isActive"
@@ -1605,7 +1660,7 @@ paths:
             default: 1000
         - name: "sort"
           in: "query"
-          description: "정렬 기준 (예: priority,desc)"
+          description: "정렬 기준 (예: priority,desc - 높은 우선순위부터)"
           schema:
             type: "array"
             items:
@@ -1700,6 +1755,174 @@ paths:
     delete:
       tags: ["4. Access Rules"]
       summary: "출입 규칙 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
+  # ==========================================
+  # 5. Personnels (Access Subjects)
+  # ==========================================
+  /personnels:
+    get:
+      tags: ["5. Personnels"]
+      summary: "출입 주체(Personnel) 목록 조회"
+      description: |
+        시스템에 등록된 출입 주체(임직원, 방문객 등) 목록을 조회합니다.<br>
+        **참고:** `name`, `department`, `phoneNumber` 등 개인정보 필드는 DB에 암호화되어 저장되므로, 일반적인 DB 검색과 성능 특성이 다를 수 있습니다.
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          description: "조직 ID 필터 (관리자용)"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "이름 검색"
+          schema:
+            type: "string"
+        - name: "employeeId"
+          in: "query"
+          description: "사번 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "department"
+          in: "query"
+          description: "부서명 검색"
+          schema:
+            type: "string"
+        - name: "securityClearanceId"
+          in: "query"
+          description: "특정 보안 등급을 가진 사용자 검색"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Personnel"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+    post:
+      tags: ["5. Personnels"]
+      summary: "출입 주체 생성"
+      description: |
+        새로운 출입 주체를 등록합니다.<br>
+        `employeeId` (사번)가 있으면 임직원, 없으면 방문객으로 간주될 수 있습니다.<br>
+        입력된 개인정보는 서버에서 암호화되어 저장됩니다.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonnelRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Personnel"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+  /personnels/{id}:
+    get:
+      tags: ["5. Personnels"]
+      summary: "출입 주체 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공 (개인정보는 복호화되어 반환됨)"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Personnel"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: ["5. Personnels"]
+      summary: "출입 주체 수정"
+      description: |
+        출입 주체 정보를 수정합니다.<br>
+        보안 등급(`securityClearanceId`) 변경 시, 해당 사용자의 출입 권한 범위가 즉시 변경될 수 있습니다.
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PersonnelRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Personnel"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
+    delete:
+      tags: ["5. Personnels"]
+      summary: "출입 주체 삭제"
+      description: |
+        출입 주체를 삭제합니다 (Soft Delete).<br>
+        삭제 시 해당 사용자에게 발급된 모든 인증 수단(Credential)과 권한(Access Grant)은 자동으로 비활성화 처리됩니다.
       parameters:
         - name: "id"
           in: "path"
@@ -2250,7 +2473,9 @@ components:
         deviceRole:
           type: "string"
           enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
-          description: "장비의 역할 (입실 리더기, 퇴실 리더기, 컨트롤러 등)"
+          description: |
+            장비의 역할 (입실 리더기, 퇴실 리더기, 컨트롤러 등)<br>
+            ENTRY는 from->to 정방향, EXIT는 to->from 역방향 이동을 유발합니다.
         portIndex:
           type: "integer"
           description: "컨트롤러 연결 포트 번호 (선택 사항)"
@@ -2507,9 +2732,6 @@ components:
         id:
           type: "string"
           format: "uuid"
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
           example: "정규직 평일 출입"
@@ -2531,30 +2753,57 @@ components:
         updatedAt:
           type: "string"
           format: "date-time"
+      example:
+        id: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        organizationId: "3fa85f64-5717-4562-b3fc-2c963f66afa6"
+        name: "정규직 평일 출입"
+        description: "평일 9-6 근무자를 위한 기본 규칙"
+        priority: 10
+        items:
+          - accessPointId: "ap-uuid-1"
+            accessPointName: "본관 1층 정문"
+            accessPointGroupId: null
+            accessPointGroupName: null
+            timeScheduleId: "schedule-uuid-1"
+            timeScheduleName: "평일 주간 근무"
+          - accessPointId: null
+            accessPointName: null
+            accessPointGroupId: "group-uuid-2"
+            accessPointGroupName: "연구동 전체 출입문"
+            timeScheduleId: "schedule-uuid-2"
+            timeScheduleName: "24시간 허용"
+        isActive: true
+        createdAt: "2025-12-22T06:57:19.336Z"
+        updatedAt: "2025-12-22T06:57:19.336Z"          
 
     AccessRuleItem:
       type: "object"
+      description: "출입 규칙 상세 항목 (ID 등 내부 식별자는 제외하고 필요한 정보만 포함)"
       properties:
-        id:
-          type: "string"
-          format: "uuid"
-        accessRuleId:
-          type: "string"
-          format: "uuid"
+        
+        # [Flexible Mapping] 그룹 또는 개별 문 중 하나만 값을 가짐
         accessPointId:
           type: "string"
           format: "uuid"
           description: "개별 출입문 ID (그룹과 둘 중 하나만 존재)"
+          nullable: true
+        accessPointName:
+          type: "string"
+          description: "[Read-Only] 출입문 이름"
+          example: "본관 1층 정문"
+          readOnly: true
           nullable: true
         accessPointGroupId:
           type: "string"
           format: "uuid"
           description: "출입문 그룹 ID (개별 문과 둘 중 하나만 존재)"
           nullable: true
-        targetName:
+        accessPointGroupName:
           type: "string"
-          description: "[Read-Only] 대상 이름 (출입문명 또는 그룹명)"
+          description: "[Read-Only] 출입문 그룹 이름"
           readOnly: true
+          nullable: true
+          example: "1층 전체 출입문"
         timeScheduleId:
           type: "string"
           format: "uuid"
@@ -2563,6 +2812,7 @@ components:
           type: "string"
           description: "[Read-Only] 시간 스케줄 이름"
           readOnly: true
+          example: "평일 근무시간"
 
     AccessRuleItemRequest:
       type: "object"
@@ -2584,23 +2834,140 @@ components:
 
     AccessRuleRequest:
       type: "object"
-      required: ["name", "priority", "items"]
+      required: ["name", "items"]
       properties:
         name:
           type: "string"
+          example: "정규직 평일 출입"
         description:
           type: "string"
+          example: "정규직 직원에게 평일 출입 권한 부여"
         priority:
           type: "integer"
           minimum: 0
           maximum: 255
           default: 0
-          description: "우선순위 (0~255). 높은 값이 승리."
+          description: "우선순위 (0~255). 숫자가 높을수록 우선순위가 높음."
         items:
           type: "array"
           minItems: 1
           items:
             $ref: "#/components/schemas/AccessRuleItemRequest"
+        isActive:
+          type: "boolean"
+          default: 
+      example:
+        name: "정규직 평일 출입"
+        description: "평일 9-6 근무자를 위한 규칙"
+        priority: 10
+        items:
+          - accessPointId: "ap-uuid-1"
+            accessPointGroupId: null
+            timeScheduleId: "schedule-uuid-1"
+          - accessPointId: null
+            accessPointGroupId: "group-uuid-2"
+            timeScheduleId: "schedule-uuid-2"
+        isActive: true
+
+    # ----------------------------------------------------
+    # 5. Personnels
+    # ----------------------------------------------------
+    Personnel:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        
+        # [암호화 필드 -> 복호화되어 제공됨]
+        name:
+          type: "string"
+          example: "홍길동"
+          description: "이름"
+        employeeId:
+          type: "string"
+          description: "사번 (임직원인 경우)"
+          example: "EMP-2023001"
+          nullable: true
+        department:
+          type: "string"
+          description: "부서명"
+          example: "보안팀"
+          nullable: true
+        position:
+          type: "string"
+          description: "직책"
+          example: "팀장"
+          nullable: true
+        phoneNumber:
+          type: "string"
+          example: "010-1234-5678"
+          nullable: true
+        email:
+          type: "string"
+          format: "email"
+          example: "hong@example.com"
+          nullable: true
+        
+        # [참조 정보]
+        securityClearanceId:
+          type: "string"
+          format: "uuid"
+          description: "할당된 보안 등급 ID"
+          nullable: true
+        securityClearanceName:
+          type: "string"
+          description: "[Read-Only] 보안 등급명"
+          readOnly: true
+          example: "일반 임직원"
+          nullable: true
+
+        isActive:
+          type: "boolean"
+        createdAt:
+          type: "string"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+
+    PersonnelRequest:
+      type: "object"
+      required: ["name"]
+      description: "개인정보는 평문으로 입력받아 서버에서 암호화 저장합니다."
+      properties:
+        name:
+          type: "string"
+          description: "이름 (필수)"
+        employeeId:
+          type: "string"
+          description: "사번 (선택)"
+          nullable: true
+        department:
+          type: "string"
+          description: "부서명"
+          nullable: true
+        position:
+          type: "string"
+          description: "직책"
+          nullable: true
+        phoneNumber:
+          type: "string"
+          nullable: true
+        email:
+          type: "string"
+          format: "email"
+          nullable: true
+        
+        securityClearanceId:
+          type: "string"
+          format: "uuid"
+          description: "부여할 보안 등급 ID (선택, 미지정 시 등급 없음)"
+          nullable: true
+        
         isActive:
           type: "boolean"
           default: true
