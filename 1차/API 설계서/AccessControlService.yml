@@ -4,7 +4,8 @@ info:
   description: |
     출입 제어 서비스(Access Control Service)를 위한 REST API 명세서입니다.<br>
     PostgreSQL 스키마를 기반으로 작성되었습니다.<br>
-    모든 필드명은 카멜케이스(camelCase)를 사용합니다.
+    모든 필드명은 카멜케이스(camelCase)를 사용합니다.<br>
+    **(참고: 인증(401), 권한(403), 서버 오류(500), 잘못된 요청(400) 등 공통 에러는 문서 간소화를 위해 각 API 명세에서 생략되었습니다.)**
   version: "1.0.0"
   contact:
     name: "Jehyun Kim"
@@ -13,31 +14,30 @@ servers:
     description: "로컬 개발 서버"     
 
 tags:
-  - name: "1. Time Policies"
+  - name: "1. Time Policy Management"
     description: "시간 정책 (스케쥴 및 공휴일) 관리"
-  - name: "2. Security Levels"
-    description: "보안 등급 및 임계값 관리"
+  - name: "2. Security Level Management"
+    description: "보안 등급(Clearance) 및 임계값(Threshold) 관리"
   - name: "3. Access Point Management"
-    description: "출입 포인트 관리 (출입 포인트(출입문/게이트) 및 출입 포인트 그룹)"
+    description: "출입 포인트 관리 (보안 설정, 그룹핑, 장비 CRUD 통합)"
   - name: "4. Access Rules"
-    description: "출입 규칙(Where + When) 정의"
-
-  - name: "3. Personnels"
+    description: "출입 규칙(Where + When) 정의 및 우선순위 관리"
+  - name: "5. Personnels"
     description: "출입 주체(직원/방문객) 관리"
-  - name: "4. Authentication"
+  - name: "6. Authentication"
     description: "인증 규칙 및 수단(Credential) 관리"
-  - name: "8. Access Grants"
+  - name: "7. Access Grants"
     description: "권한 부여 및 이력"
-  - name: "10. Interlocks"
+  - name: "8. Interlocks"
     description: "인터락(Man-trap) 연동 제어"
 
 paths:
   # ==========================================
-  # 1. Time Policies
+  # 1. Time Policy Management
   # ==========================================
   /time-schedules:
     get:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "시간 스케쥴 목록 조회"
       description: |
         조건에 맞는 시간 스케쥴 목록을 조회합니다.<br>
@@ -47,7 +47,7 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
-          description: "조직 ID 필터"
+          description: "조직 ID 필터 (관리자용, 일반 사용자는 자동 고정)"
           schema:
             type: "string"
             format: "uuid"
@@ -107,8 +107,7 @@ paths:
                   summary: "다양한 스케쥴 유형 및 공휴일 매핑 포함 예시"
                   value:
                     content:
-                      - organizationId: "123e4567-e89b-12d3-a456-426614174000"
-                        id: "123e4567-e89b-12d3-a456-426614174001"
+                      - id: "123e4567-e89b-12d3-a456-426614174001"
                         name: "평일 근무시간 (커스텀)"
                         description: "평일 09:00 ~ 12:00, 13:00 ~ 18:00 근무"
                         code: "SCH-001"
@@ -187,7 +186,7 @@ paths:
                       hasNext: false
 
     post:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "시간 스케쥴 생성"
       description: |
         새로운 시간 스케쥴을 생성합니다.<br>
@@ -206,7 +205,6 @@ paths:
               createScheduleExample:
                 summary: "평일 근무(09-18) 및 공휴일 휴무 설정 입력 예시"
                 value:
-                  organizationId: "123e4567-e89b-12d3-a456-426614174000"
                   name: "일반 평일 근무"
                   description: "월~금 09:00~18:00 근무 (점심시간 12:00~13:00 제외), 주말 및 공휴일 출입 불가"
                   code: "SCH-REGULAR-01"
@@ -271,7 +269,6 @@ paths:
                 createdResponse:
                   summary: "생성된 시간 스케쥴 응답"
                   value:
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"
                     id: "123e4567-e89b-12d3-a456-426614174001"
                     name: "일반 평일 근무"
                     description: "월~금 09:00~18:00 근무 (점심시간 12:00~13:00 제외), 주말 및 공휴일 출입 불가"
@@ -329,22 +326,11 @@ paths:
                     createdAt: "2024-01-01T09:00:00Z"
                     updatedAt: "2024-01-01T09:00:00Z"
         '409':
-          description: "Conflict. 데이터 유니크 제약 조건 위반 (이름, 코드 중복)"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  errorCode:
-                    type: "string"
-                    example: "DUPLICATE_ENTRY"
-                  errorMessage:
-                    type: "string"
-                    example: "이미 존재하는 스케쥴 이름 또는 코드입니다."
+          $ref: "#/components/responses/Conflict"
 
   /time-schedules/{id}:
     get:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "시간 스케쥴 단건 조회"
       parameters:
         - name: "id"
@@ -364,7 +350,6 @@ paths:
                 singleSchedule:
                   summary: "단일 스케쥴 조회 응답"
                   value:
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"
                     id: "123e4567-e89b-12d3-a456-426614174001"
                     name: "일반 평일 근무"
                     description: "월~금 09:00~18:00 근무 (점심시간 12:00~13:00 제외), 주말 및 공휴일 출입 불가"
@@ -421,8 +406,11 @@ paths:
                     isActive: true
                     createdAt: "2024-01-01T09:00:00Z"
                     updatedAt: "2024-01-01T09:00:00Z"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "시간 스케쥴 수정"
       description: |
         시간 스케쥴 정보를 전체 수정합니다 (Replacement).
@@ -451,7 +439,6 @@ paths:
               updateExample:
                 summary: "시간 스케쥴 전체 수정 요청 예시"
                 value:
-                  organizationId: "123e4567-e89b-12d3-a456-426614174000"
                   name: "일반 평일 근무 (수정됨)"
                   description: "설명이 변경되었습니다. (09:30 출근)"
                   code: "SCH-REGULAR-01"
@@ -503,7 +490,6 @@ paths:
                 updatedResponse:
                   summary: "수정된 시간 스케쥴 응답"
                   value:
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"
                     id: "123e4567-e89b-12d3-a456-426614174001"
                     name: "일반 평일 근무 (수정됨)"
                     description: "설명이 변경되었습니다. (09:30 출근)"
@@ -550,21 +536,13 @@ paths:
                     isActive: true
                     createdAt: "2024-01-01T09:00:00Z"
                     updatedAt: "2024-01-10T15:00:00Z"
+        '404':
+          $ref: "#/components/responses/NotFound"
         '409':
-          description: "Conflict. 데이터 유니크 제약 조건 위반 (이름, 코드 중복)"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  errorCode:
-                    type: "string"
-                    example: "DUPLICATE_ENTRY"
-                  errorMessage:
-                    type: "string"
-                    example: "이미 존재하는 스케쥴 이름 또는 코드입니다."
+          $ref: "#/components/responses/Conflict"
+
     delete:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "시간 스케쥴 삭제"
       description: |
         시간 스케쥴을 삭제합니다.
@@ -590,10 +568,12 @@ paths:
                     id: "123e4567-e89b-12d3-a456-426614174000"
                     isSoftDeleted: true
                     isHardDeleted: false
+        '404':
+          $ref: "#/components/responses/NotFound"
 
   /holidays:
     get:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "공휴일 목록 조회"
       description: |
         조건에 맞는 공휴일 목록을 조회합니다.
@@ -669,7 +649,6 @@ paths:
                   value:
                     content:
                       - id: "holiday-uuid-1"
-                        organizationId: "123e4567-e89b-12d3-a456-426614174000"
                         name: "신정 (매년 반복)"
                         description: "매년 1월 1일"
                         code: "HOL-001"
@@ -680,7 +659,6 @@ paths:
                             isSubstitute: false
                         isActive: true
                       - id: "holiday-uuid-2"
-                        organizationId: "123e4567-e89b-12d3-a456-426614174000"
                         name: "2024년 설날 연휴"
                         description: "2024년 설날 및 대체공휴일"
                         code: "HOL-2024-SEOL"
@@ -706,8 +684,9 @@ paths:
                       totalPages: 1
                       isLast: true
                       hasNext: false
+
     post:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "공휴일 등록"
       description: |
         새로운 공휴일 그룹을 등록합니다.
@@ -728,24 +707,20 @@ paths:
               recurringHoliday:
                 summary: "매년 반복되는 공휴일(신정) 등록 예시"
                 value:
-                  organizationId: "123e4567-e89b-12d3-a456-426614174000"
                   name: "신정"
                   description: "매년 1월 1일은 신정입니다."
                   code: "HOL-001"
                   isRecurring: true
-                  isActive: true
                   items:
                     - holidayDate: "01-01"
                       isSubstitute: false
               oneTimeHoliday:
                 summary: "특정 연도 공휴일(설날) 등록 예시"
                 value:
-                  organizationId: "123e4567-e89b-12d3-a456-426614174000"
                   name: "2024년 설날"
                   description: "2024년 갑진년 설날 연휴"
                   code: "HOL-2024-SEOL"
                   isRecurring: false
-                  isActive: true
                   items:
                     - holidayDate: "2024-02-09"
                     - holidayDate: "2024-02-10"
@@ -764,7 +739,6 @@ paths:
                   summary: "생성된 공휴일 응답"
                   value:
                     id: "holiday-uuid-1"
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"
                     name: "신정"
                     description: "매년 1월 1일은 신정입니다."
                     code: "HOL-001"
@@ -778,22 +752,11 @@ paths:
                         isSubstitute: false
                     isActive: true
         '409':
-          description: "Conflict. 데이터 유니크 제약 조건 위반 (이름, 코드 중복)"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  errorCode:
-                    type: "string"
-                    example: "DUPLICATE_ENTRY"
-                  errorMessage:
-                    type: "string"
-                    example: "이미 존재하는 공휴일 이름/코드가 있습니다."
+          $ref: "#/components/responses/Conflict"
 
   /holidays/{id}:
     get:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "공휴일 단건 조회"
       parameters:
         - name: "id"
@@ -813,7 +776,6 @@ paths:
                 singleHoliday:
                   summary: "단건 조회 예시"
                   value:
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"  
                     id: "holiday-uuid-1"                    
                     name: "신정"
                     description: "매년 1월 1일"
@@ -824,8 +786,11 @@ paths:
                       - id: "item-gen-1"
                         holidayDate: "2024-01-01"
                         isSubstitute: false
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "공휴일 수정"
       description: |
         공휴일 정보를 전체 수정합니다 (Replacement).
@@ -841,7 +806,6 @@ paths:
         **유니크 제약 조건:**
         - `name`: 조직(`organizationId`) 내에서 유일해야 합니다. (자기 자신 제외)
         - `code`: 조직(`organizationId`) 내에서 유일해야 합니다. (자기 자신 제외)
-        - `items.holidayDate`: 조직(`organizationId`) 내에서 유일해야 합니다. 이미 다른 공휴일 그룹에 등록된 날짜는 지정할 수 없습니다.
       parameters:
         - name: "id"
           in: "path"
@@ -858,7 +822,6 @@ paths:
               updateExample:
                 summary: "공휴일 수정 요청 예시"
                 value:
-                  organizationId: "123e4567-e89b-12d3-a456-426614174000"
                   name: "신정 (수정됨)"
                   description: "설명 변경됨"
                   code: "HOL-001"
@@ -879,7 +842,6 @@ paths:
                   summary: "수정된 공휴일 응답"
                   value:
                     id: "holiday-uuid-1"
-                    organizationId: "123e4567-e89b-12d3-a456-426614174000"
                     name: "신정 (수정됨)"
                     description: "설명 변경됨"
                     code: "HOL-001"
@@ -889,21 +851,13 @@ paths:
                         holidayDate: "2025-01-01"
                         isSubstitute: false
                     isActive: true
+        '404':
+          $ref: "#/components/responses/NotFound"
         '409':
-          description: "Conflict. 데이터 유니크 제약 조건 위반 (이름, 코드, 날짜 중복)"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  errorCode:
-                    type: "string"
-                    example: "DUPLICATE_ENTRY"
-                  errorMessage:
-                    type: "string"
-                    example: "이미 존재하는 공휴일 이름/코드 또는 겹치는 날짜가 있습니다."
+          $ref: "#/components/responses/Conflict"
+
     delete:
-      tags: ["1. Time Policies"]
+      tags: ["1. Time Policy Management"]
       summary: "공휴일 삭제"
       parameters:
         - name: "id"
@@ -926,19 +880,20 @@ paths:
                     id: "holiday-uuid-1"
                     isSoftDeleted: true
                     isHardDeleted: false
+        '404':
+          $ref: "#/components/responses/NotFound"
+
 
   # ==========================================
-  # 2. Security Levels (복원 및 순서 조정)
+  # 2. Security Level Management
   # ==========================================
-  /operator-levels:
+  /security-clearances:
     get:
-      tags: ["2. Security Levels"]
-      summary: "운영자 등급(Operator Level) 목록 조회"
+      tags: ["2. Security Level Management"]
+      summary: "보안 등급(Security Clearance) 목록 조회"
       description: |
-        사람(Personnel)에게 부여할 수 있는 보안 등급 목록을 조회합니다.<br>
-        `accessLevel`이 높을수록 더 높은 보안 등급의 문을 통과할 수 있습니다.<br>
-        `antipassbackLevel`이 높을수록 더 높은 안티패스백 면제 등급을 가질 수 있습니다.<br>
-        `armingLevel`이 높을수록 더 높은 경비 등급을 가질 수 있습니다.<br>
+        사람(Personnel)에게 부여할 수 있는 보안 등급(인가 등급) 목록을 조회합니다.<br>
+        `accessLevel`이 높을수록 더 높은 보안 임계값(Threshold)을 가진 문을 통과할 수 있습니다.
       parameters:
         - name: "organizationId"
           in: "query"
@@ -946,10 +901,49 @@ paths:
           schema:
             type: "string"
             format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "등급명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "accessLevel"
+          in: "query"
+          description: "출입 권한 레벨 일치 검색"
+          schema:
+            type: "integer"
+        - name: "antipassbackLevel"
+          in: "query"
+          description: "안티패스백 레벨 일치 검색"
+          schema:
+            type: "integer"
+        - name: "armingLevel"
+          in: "query"
+          description: "경비 레벨 일치 검색"
+          schema:
+            type: "integer"
         - name: "isActive"
           in: "query"
           schema:
             type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: |
+            정렬 기준 (형식: 필드명,정렬방향)<br>
+            예: accessLevel,desc (높은 등급순), name,asc (이름순)
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -961,32 +955,34 @@ paths:
                   content:
                     type: "array"
                     items:
-                      $ref: "#/components/schemas/OperatorLevel"
+                      $ref: "#/components/schemas/SecurityClearance"
                   page:
                     $ref: "#/components/schemas/PageMetadata"
-    post:
-      tags: ["2. Security Levels"]
-      summary: "운영자 등급 생성"
-      description: |
-        새로운 운영자 등급을 생성합니다.
-        `accessLevel`, `antipassbackLevel`, `armingLevel`은 모두 정수형(Integer)입니다.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/OperatorLevelRequest"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/OperatorLevel"
 
-  /operator-levels/{id}:
+    post:
+      tags: ["2. Security Level Management"]
+      summary: "보안 등급 생성"
+      description: |
+        새로운 보안 등급을 생성합니다.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecurityClearanceRequest"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityClearance"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+  /security-clearances/{id}:
     get:
-      tags: ["2. Security Levels"]
-      summary: "운영자 등급 단건 조회"
+      tags: ["2. Security Level Management"]
+      summary: "보안 등급 단건 조회"
       parameters:
         - name: "id"
           in: "path"
@@ -1000,10 +996,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OperatorLevel"
+                $ref: "#/components/schemas/SecurityClearance"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
-      tags: ["2. Security Levels"]
-      summary: "운영자 등급 수정"
+      tags: ["2. Security Level Management"]
+      summary: "보안 등급 수정"
       parameters:
         - name: "id"
           in: "path"
@@ -1015,17 +1014,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/OperatorLevelRequest"
+              $ref: "#/components/schemas/SecurityClearanceRequest"
       responses:
         '200':
           description: "수정됨"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/OperatorLevel"
+                $ref: "#/components/schemas/SecurityClearance"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
     delete:
-      tags: ["2. Security Levels"]
-      summary: "운영자 등급 삭제"
+      tags: ["2. Security Level Management"]
+      summary: "보안 등급 삭제"
       parameters:
         - name: "id"
           in: "path"
@@ -1040,24 +1044,65 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResult"
+        '404':
+          $ref: "#/components/responses/NotFound"
 
-  /access-thresholds:
+  /security-thresholds:
     get:
-      tags: ["2. Security Levels"]
-      summary: "출입 임계값(Access Threshold) 목록 조회"
+      tags: ["2. Security Level Management"]
+      summary: "보안 임계값(Security Threshold) 목록 조회"
       description: |
         출입문(Access Point)에 설정할 수 있는 최소 보안 요구사항 목록을 조회합니다.<br>
-        `minAccessLevel`보다 낮은 `accessLevel`을 가진 사람은 출입이 거부됩니다.
+        `minAccessLevel`보다 낮은 `accessLevel`을 가진 사람은 출입이 거부됩니다.<br>
       parameters:
         - name: "organizationId"
           in: "query"
           schema:
             type: "string"
             format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "임계값 이름 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "minAccessLevel"
+          in: "query"
+          description: "최소 출입 레벨 일치 검색"
+          schema:
+            type: "integer"
+        - name: "minAntipassbackLevel"
+          in: "query"
+          description: "최소 안티패스백 레벨 일치 검색"
+          schema:
+            type: "integer"
+        - name: "minArmingLevel"
+          in: "query"
+          description: "최소 경비 레벨 일치 검색"
+          schema:
+            type: "integer"
         - name: "isActive"
           in: "query"
           schema:
             type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: |
+            정렬 기준 (형식: 필드명,정렬방향)<br>
+            예: minAccessLevel,asc (낮은 레벨순), name,asc
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -1069,29 +1114,32 @@ paths:
                   content:
                     type: "array"
                     items:
-                      $ref: "#/components/schemas/AccessThreshold"
+                      $ref: "#/components/schemas/SecurityThreshold"
                   page:
                     $ref: "#/components/schemas/PageMetadata"
-    post:
-      tags: ["2. Security Levels"]
-      summary: "출입 임계값 생성"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessThresholdRequest"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessThreshold"
 
-  /access-thresholds/{id}:
+    post:
+      tags: ["2. Security Level Management"]
+      summary: "보안 임계값 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SecurityThresholdRequest"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/SecurityThreshold"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+  /security-thresholds/{id}:
     get:
-      tags: ["2. Security Levels"]
-      summary: "출입 임계값 단건 조회"
+      tags: ["2. Security Level Management"]
+      summary: "보안 임계값 단건 조회"
       parameters:
         - name: "id"
           in: "path"
@@ -1105,10 +1153,13 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessThreshold"
+                $ref: "#/components/schemas/SecurityThreshold"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
-      tags: ["2. Security Levels"]
-      summary: "출입 임계값 수정"
+      tags: ["2. Security Level Management"]
+      summary: "보안 임계값 수정"
       parameters:
         - name: "id"
           in: "path"
@@ -1120,17 +1171,22 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessThresholdRequest"
+              $ref: "#/components/schemas/SecurityThresholdRequest"
       responses:
         '200':
           description: "수정됨"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessThreshold"
+                $ref: "#/components/schemas/SecurityThreshold"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
     delete:
-      tags: ["2. Security Levels"]
-      summary: "출입 임계값 삭제"
+      tags: ["2. Security Level Management"]
+      summary: "보안 임계값 삭제"
       parameters:
         - name: "id"
           in: "path"
@@ -1145,6 +1201,8 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResult"
+        '404':
+          $ref: "#/components/responses/NotFound"
 
   # ==========================================
   # 3. Access Point Management
@@ -1152,9 +1210,9 @@ paths:
   /access-points:
     get:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점(Access Point) 목록 조회"
+      summary: "출입 포인트(Access Point) 목록 조회"
       description: |
-        물리적 출입 지점 목록을 조회합니다.<br>
+        물리적 출입 포인트 목록을 조회합니다.<br>
         상위 공간(`site`, `facility`, `sector`) 및 구역(`area`)별 조회나 타입(`type`)별 필터링을 지원합니다.
       parameters:
         - name: "organizationId"
@@ -1188,12 +1246,12 @@ paths:
             format: "uuid"
         - name: "name"
           in: "query"
-          description: "출입 지점명 검색 (부분 일치)"
+          description: "출입 포인트명 검색 (부분 일치)"
           schema:
             type: "string"
         - name: "type"
           in: "query"
-          description: "출입 지점 타입 필터"
+          description: "출입 포인트 타입 필터"
           schema:
             type: "string"
             enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
@@ -1237,14 +1295,14 @@ paths:
                     $ref: "#/components/schemas/PageMetadata"
     post:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점 생성"
+      summary: "출입 포인트 생성"
       description: |
-        새로운 물리적 출입 지점을 생성합니다.
+        새로운 물리적 출입 포인트을 생성합니다.
         
-        **주요 필드:**
-        - `areaId`: 소속 구역 (필수)
-        - `fromAreaId`, `toAreaId`: 안티패스백을 위한 진입/진출 구역 정보
-        - `accessPointType`: 장비 제어 로직을 결정하는 타입 (기본값 DOOR)
+        **주요 특징:**
+        - **공간 정보:** `siteId`, `facilityId`, `sectorId`, `areaId` 중 하나 이상을 입력하여 위치를 지정할 수 있습니다. (모두 선택 사항)
+        - **보안 설정:** 입실/퇴실에 대한 인증 규칙(`AuthenticationRule`)과 최소 보안 임계값(`SecurityThreshold`)을 직접 설정합니다.
+        - **장비 연결:** `devices` 배열을 통해 입/출 리더기나 컨트롤러 등 물리적 장비를 즉시 연결할 수 있습니다.
       requestBody:
         content:
           application/json:
@@ -1257,14 +1315,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessPoint"
+        '409':
+          $ref: "#/components/responses/Conflict"
 
   /access-points/types:
     get:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점 타입 목록 조회"
+      summary: "출입 포인트 타입 목록 조회"
       description: |
-        시스템에서 지원하는 출입 지점 타입(Enum) 목록을 조회합니다.<br>
-        출입 지점 타입(Enum) 목록:<br>
+        시스템에서 지원하는 출입 포인트 타입(Enum) 목록을 조회합니다.<br>
+        출입 포인트 타입(Enum) 목록:<br>
         `"DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"`<br>
         UI 드롭다운(Select Box) 구성에 사용됩니다.<br>
         반환 예시: <br>
@@ -1282,7 +1342,7 @@ paths:
   /access-points/{id}:
     get:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점 단건 조회"
+      summary: "출입 포인트 단건 조회"
       parameters:
         - name: "id"
           in: "path"
@@ -1297,9 +1357,12 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessPoint"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점 수정"
+      summary: "출입 포인트 수정"
       parameters:
         - name: "id"
           in: "path"
@@ -1319,9 +1382,14 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/AccessPoint"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
     delete:
       tags: ["3. Access Point Management"]
-      summary: "출입 지점 삭제"
+      summary: "출입 포인트 삭제"
       parameters:
         - name: "id"
           in: "path"
@@ -1336,69 +1404,16 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResult"
-
-  /access-point-configs/{accessPointId}:
-    get:
-      tags: ["3. Access Point Management"]
-      summary: "출입문 보안 설정 조회"
-      description: |
-        특정 출입문(Access Point)에 설정된 보안 정책을 조회합니다.
-        Space Service에 등록된 물리적 `accessPointId`를 Key로 사용합니다.
-      parameters:
-        - name: "accessPointId"
-          in: "path"
-          required: true
-          description: "Space Service의 Access Point ID"
-          schema:
-            type: "string"
-            format: "uuid"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPointConfig"
         '404':
-          description: "Not Found. 해당 출입문에 대한 설정이 없습니다."
-          
-    put:
-      tags: ["3. Access Point Management"]
-      summary: "출입문 보안 설정 수정/등록 (Upsert)"
-      description: |
-        특정 출입문에 대한 보안 정책을 설정합니다.<br>
-        이미 설정이 존재하면 수정하고, 없으면 새로 생성합니다 (Upsert 방식).<br>
-        
-        - **입실(Entry) / 퇴실(Exit) 정책 분리:** 들어올 때와 나갈 때의 규칙을 다르게 설정할 수 있습니다.
-        - **참조 ID:** `AuthenticationRule`과 `AccessThreshold`의 ID를 연결합니다. (ID 유효성 검증 필요)
-      parameters:
-        - name: "accessPointId"
-          in: "path"
-          required: true
-          description: "Space Service의 Access Point ID"
-          schema:
-            type: "string"
-            format: "uuid"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessPointConfigRequest"
-      responses:
-        '200':
-          description: "설정 저장 성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPointConfig"
+          $ref: "#/components/responses/NotFound"
 
-  /access-groups:
+  /access-point-groups:
     get:
       tags: ["3. Access Point Management"]
       summary: "출입 포인트 그룹 목록 조회"
       description: |
         출입 포인트 그룹 목록을 조회합니다.<br>
-        그룹은 권한 할당의 편의를 위해 여러 출입 포인트를 묶어서 관리하는 단위입니다.
+        그룹 이름 검색 외에 **특정 출입 포인트가 포함된 그룹**을 찾는 기능이 제공됩니다.
       parameters:
         - name: "organizationId"
           in: "query"
@@ -1408,6 +1423,17 @@ paths:
         - name: "name"
           in: "query"
           description: "그룹 이름 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "accessPointId"
+          in: "query"
+          description: "특정 출입 포인트 ID가 포함된 그룹 검색"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "accessPointName"
+          in: "query"
+          description: "특정 출입 포인트 이름(부분 일치)이 포함된 그룹 검색"
           schema:
             type: "string"
         - name: "isActive"
@@ -1424,6 +1450,16 @@ paths:
           schema:
             type: "integer"
             default: 1000
+        - name: "sort"
+          in: "query"
+          description: |
+            정렬 기준 (형식: 필드명,정렬방향)<br>
+            예: name,asc (이름순), createdAt,desc (최신순)<br>
+            다중 정렬 가능
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -1435,9 +1471,10 @@ paths:
                   content:
                     type: "array"
                     items:
-                      $ref: "#/components/schemas/AccessGroup"
+                      $ref: "#/components/schemas/AccessPointGroup"
                   page:
                     $ref: "#/components/schemas/PageMetadata"
+
     post:
       tags: ["3. Access Point Management"]
       summary: "출입 포인트 그룹 생성"
@@ -1448,16 +1485,18 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessGroupRequest"
+              $ref: "#/components/schemas/AccessPointGroupRequest"
       responses:
         '200':
           description: "생성됨"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessGroup"
+                $ref: "#/components/schemas/AccessPointGroup"
+        '409':
+          $ref: "#/components/responses/Conflict"
 
-  /access-groups/{id}:
+  /access-point-groups/{id}:
     get:
       tags: ["3. Access Point Management"]
       summary: "출입 포인트 그룹 단건 조회"
@@ -1474,7 +1513,10 @@ paths:
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessGroup"
+                $ref: "#/components/schemas/AccessPointGroup"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
     put:
       tags: ["3. Access Point Management"]
       summary: "출입 포인트 그룹 수정"
@@ -1492,14 +1534,19 @@ paths:
         content:
           application/json:
             schema:
-              $ref: "#/components/schemas/AccessGroupRequest"
+              $ref: "#/components/schemas/AccessPointGroupRequest"
       responses:
         '200':
           description: "수정됨"
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/AccessGroup"
+                $ref: "#/components/schemas/AccessPointGroup"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
     delete:
       tags: ["3. Access Point Management"]
       summary: "출입 포인트 그룹 삭제"
@@ -1517,8 +1564,197 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/DeleteResult"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
+  # ==========================================
+  # 4. Access Rules (Priority-Based)
+  # ==========================================
+  /access-rules:
+    get:
+      tags: ["4. Access Rules"]
+      summary: "출입 규칙(Access Rule) 목록 조회"
+      description: |
+        출입 규칙 목록을 조회합니다.<br>
+        `priority`가 높을수록 강력한 규칙으로 간주됩니다. (High Priority Wins)
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          description: "조직 ID 필터 (관리자용)"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "규칙명 검색"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: priority,desc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/AccessRule"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+    post:
+      tags: ["4. Access Rules"]
+      summary: "출입 규칙 생성"
+      description: |
+        새로운 출입 규칙을 생성합니다.<br>
+        **우선순위(Priority):** 0~255 사이의 정수. 숫자가 클수록 높은 권한을 가집니다.<br>
+        **매핑:** 하나의 규칙에 [개별 출입문 + 스케줄] 또는 [출입문 그룹 + 스케줄] 조합을 여러 개 담을 수 있습니다.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessRuleRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRule"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+  /access-rules/{id}:
+    get:
+      tags: ["4. Access Rules"]
+      summary: "출입 규칙 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRule"
+        '404':
+          $ref: "#/components/responses/NotFound"
+
+    put:
+      tags: ["4. Access Rules"]
+      summary: "출입 규칙 수정"
+      description: |
+        출입 규칙을 수정합니다. 헤더 정보와 상세 항목(items)을 모두 포함하여 전체 업데이트(Replacement)합니다.
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessRuleRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessRule"
+        '404':
+          $ref: "#/components/responses/NotFound"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+    delete:
+      tags: ["4. Access Rules"]
+      summary: "출입 규칙 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+        '404':
+          $ref: "#/components/responses/NotFound"
 
 components:
+  responses:
+    BadRequest:
+      description: "잘못된 요청 (유효성 검사 실패 등)"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Unauthorized:
+      description: "인증 실패 (토큰 없음/만료)"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Forbidden:
+      description: "권한 없음"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    NotFound:
+      description: "리소스를 찾을 수 없음"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    Conflict:
+      description: "데이터 충돌 (중복 등)"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
+    InternalServerError:
+      description: "서버 내부 오류"
+      content:
+        application/json:
+          schema:
+            $ref: "#/components/schemas/ErrorResponse"
   schemas:
     # ----------------------------------------------------
     # Common Schemas
@@ -1565,8 +1801,24 @@ components:
           type: "boolean"
           description: "물리적 삭제(Hard Delete) 여부. true면 DB에서 완전히 제거됨."
 
+    ErrorResponse:
+      type: "object"
+      properties:
+        errorCode:
+          type: "string"
+          description: "에러 코드 (예: DUPLICATE_ENTRY, RESOURCE_NOT_FOUND)"
+          example: "INVALID_REQUEST"
+        errorMessage:
+          type: "string"
+          description: "에러 메시지"
+          example: "잘못된 요청입니다."
+        errorDetails:
+          type: "object"
+          description: "상세 에러 내용 (필드별 유효성 검사 실패 사유 등)"
+          nullable: true
+
     # ----------------------------------------------------
-    # 1. Time Policies
+    # 1. Time Policy Management
     # ----------------------------------------------------
     TimeScheduleListResponse:
       type: "object"
@@ -1581,9 +1833,6 @@ components:
     TimeSchedule:
       type: "object"
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         id:
           type: "string"
           format: "uuid"
@@ -1668,9 +1917,6 @@ components:
       type: "object"
       required: ["name", "details"]
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
         description:
@@ -1754,9 +2000,6 @@ components:
       type: "object"
       required: ["name", "items"]
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
         description:
@@ -1787,9 +2030,9 @@ components:
           default: true
 
     # ----------------------------------------------------
-    # 2. Security Levels
+    # 2. Security Level Management
     # ----------------------------------------------------
-    OperatorLevel:
+    SecurityClearance:
       type: "object"
       properties:
         id:
@@ -1800,49 +2043,52 @@ components:
           example: "일반 임직원"
         description:
           type: "string"
+          example: "대부분의 임직원에게 부여되는 기본 출입 권한 등급"
         accessLevel:
           type: "integer"
-          description: "출입 권한 레벨 (0~255). 이 값이 문의 minAccessLevel보다 크거나 같아야 통과."
+          description: "출입 권한 레벨 (1~255). 이 값이 문의 minAccessLevel보다 크거나 같아야 통과."
           example: 10
         antipassbackLevel:
           type: "integer"
-          description: "안티패스백 면제 레벨"
-          example: 1
+          description: "안티패스백 면제 레벨 (1~255)"
+          default: 1
         armingLevel:
           type: "integer"
-          description: "경비(Arming) 설정 가능 레벨"
-          example: 1
+          description: "경비(Arming) 설정 가능 레벨 (1~255)"
+          default: 1
         isActive:
           type: "boolean"
 
-    OperatorLevelRequest:
+    SecurityClearanceRequest:
       type: "object"
-      required: ["name", "accessLevel", "antipassbackLevel", "armingLevel"]
+      required: ["name"]
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
+          example: "일반 임직원"
         description:
           type: "string"
+          example: "대부분의 임직원에게 부여되는 기본 출입 권한 등급"
         accessLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         antipassbackLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         armingLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         isActive:
           type: "boolean"
           default: true
 
-    AccessThreshold:
+    SecurityThreshold:
       type: "object"
       properties:
         id:
@@ -1853,43 +2099,44 @@ components:
           example: "보안구역 레벨"
         description:
           type: "string"
+          example: "출입 포인트에 설정할 최소 보안 요구사항"
         minAccessLevel:
           type: "integer"
-          description: "최소 요구 출입 레벨"
+          description: "최소 요구 출입 레벨 (1~255)"
           example: 10
         minAntipassbackLevel:
           type: "integer"
-          description: "최소 요구 안티패스백 면제 레벨"
-          example: 5
+          default: 1
         minArmingLevel:
           type: "integer"
-          description: "최소 요구 경비 레벨"
-          example: 10
+          default: 1
         isActive:
           type: "boolean"
 
-    AccessThresholdRequest:
+    SecurityThresholdRequest:
       type: "object"
-      required: ["name", "minAccessLevel", "minAntipassbackLevel", "minArmingLevel"]
+      required: ["name"]
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
+          example: "보안구역 레벨"
         description:
           type: "string"
+          example: "출입 포인트에 설정할 최소 보안 요구사항"
         minAccessLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         minAntipassbackLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         minArmingLevel:
           type: "integer"
-          minimum: 0
+          default: 1
+          minimum: 1
           maximum: 255
         isActive:
           type: "boolean"
@@ -1903,7 +2150,7 @@ components:
       properties:
         code:
           type: "string"
-          description: "타입 코드 (DB 저장 값)"
+          description: "출입 포인트 타입 코드 (DB 저장 값)"
           example: "DOOR"
         label:
           type: "string"
@@ -1913,7 +2160,7 @@ components:
     AccessPoint:
       type: "object"
       properties:
-        organizationId:
+        id:
           type: "string"
           format: "uuid"
         siteId:
@@ -1932,28 +2179,35 @@ components:
           type: "string"
           format: "uuid"
           description: "소속 구역 ID"
-        id:
-          type: "string"
-          format: "uuid"
         siteName:
           type: "string"
-          description: "소속 사이트명 (예: 판교 캠퍼스)"
+          description: "[Read-Only] 소속 사이트명"
+          example: "본사 캠퍼스"
+          readOnly: true
         facilityName:
           type: "string"
-          description: "소속 시설물명 (예: 본관)"
+          description: "[Read-Only] 소속 시설물명"
+          example: "본관 빌딩"
+          readOnly: true
         sectorName:
           type: "string"
-          description: "소속 구획명 (예: 1F)"
+          description: "[Read-Only] 소속 구획명"
+          example: "3층"
+          readOnly: true
         areaName:
           type: "string"
-          description: "소속 구역명 (예: 로비)"
+          description: "[Read-Only] 소속 구역명"
+          example: "보안구역 A"
+          readOnly: true
         name:
           type: "string"
           example: "본관 1층 정문"
         description:
           type: "string"
+          example: "본관 빌딩 1층에 위치한 주요 출입문"
         code:
           type: "string"
+          example: "AP-ENT-001"
         type:
           type: "string"
           enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
@@ -1968,6 +2222,14 @@ components:
         config:
           type: "object"
           description: "하드웨어 제어 관련 설정 (개방 시간, 릴레이 등)"
+        securityConfig:
+          $ref: "#/components/schemas/AccessPointConfig"
+          description: "적용된 보안 정책 정보 (등급, 인증 규칙 등)"
+        devices:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/AccessPointDevice"
+          description: "연결된 물리적 장비 목록"
         isActive:
           type: "boolean"
         createdAt:
@@ -1977,23 +2239,98 @@ components:
           type: "string"
           format: "date-time"
 
-    AccessPointRequest:
+    AccessPointDeviceRequest:
       type: "object"
-      required: ["name", "areaId", "accessPointType"]
+      required: ["deviceId", "deviceRole"]
       properties:
-        organizationId:
+        deviceId:
           type: "string"
           format: "uuid"
+          description: "연결할 장비 ID"
+        deviceRole:
+          type: "string"
+          enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
+          description: "장비의 역할 (입실 리더기, 퇴실 리더기, 컨트롤러 등)"
+        portIndex:
+          type: "integer"
+          description: "컨트롤러 연결 포트 번호 (선택 사항)"
+        authenticationModes:
+          type: "array"
+          items:
+            type: "string"
+            enum: ["CARD", "PIN", "BIOMETRIC", "MOBILE"]
+          description: "인증 타입 (리더기인 경우, 선택 사항)"
+
+    AccessPointDevice:
+      type: "object"
+      description: "출입 지점에 연결된 장비 상세 정보"
+      properties:
+        deviceId:
+          type: "string"
+          format: "uuid"
+        deviceName:
+          type: "string"
+          description: "장비명"
+          example: "정문 입실 리더기"
+        deviceCode:
+          type: "string"
+          description: "장비 코드"
+          example: "DEV-READER-001"
+        deviceType:
+          type: "string"
+          enum: ["ACU", "READER", "CONTROLLER", "CAMERA", "SENSOR"]
+          description: "장비 타입 (ACU, READER, CONTROLLER, CAMERA, SENSOR)"
+        deviceRole:
+          type: "string"
+          enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
+          description: "이 출입 지점에서의 역할"
+        portIndex:
+          type: "integer"
+          description: "연결 포트 번호" 
+        authenticationModes:
+          type: "array"
+          items:
+            type: "string"
+            enum: ["CARD", "PIN", "BIOMETRIC", "MOBILE"]
+          description: "인증 타입 (리더기인 경우)"
+
+    AccessPointRequest:
+      type: "object"
+      required: ["name", "type", "securityConfig"]
+      description: |
+        출입 지점 생성/수정 요청 객체.<br>
+        `siteId`, `facilityId`, `sectorId`, `areaId` 중 하나를 선택하여 공간을 지정합니다.<br>
+        **보안 설정(Security Config):** <br>
+        - **보안 임계값(Threshold):** ID 참조와 직접 값 입력을 모두 지원하는 하이브리드 방식입니다. ID가 입력되면 ID의 정책을 따르고, ID가 없으면 직접 입력된 값(Level)을 사용합니다.<br>
+        - **인증 규칙(Authentication):** 오직 ID 참조만 가능합니다. (직접 입력 불가)
+      properties:
+        siteId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 사이트 ID (선택)"
+        facilityId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 시설물 ID (선택)"
+        sectorId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 층/구획 ID (선택)"
         areaId:
           type: "string"
           format: "uuid"
+          nullable: true
+          description: "소속 구역 ID (선택)"
         name:
           type: "string"
         description:
           type: "string"
-        accessPointCode:
+        code:
           type: "string"
-        accessPointType:
+        type:
           type: "string"
           enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
           default: "DOOR"
@@ -2008,83 +2345,123 @@ components:
         config:
           type: "object"
           nullable: true
-        isActive:
-          type: "boolean"
-          default: true
+          description: "하드웨어 제어 설정 (개방 시간 등)"
+        securityConfig:
+          type: "object"
+          required: ["entryAuthenticationRuleId", "exitAuthenticationRuleId"]
+          properties:
+            # --- [보안 설정 - 입실 (Entry)] ---
+            entrySecurityThresholdId:
+              type: "string"
+              format: "uuid"
+              nullable: true
+              description: "[하이브리드] 입실 보안 임계값 ID (우선 적용)"
+            entryAccessLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 입실 출입 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+            entryAntipassbackLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 입실 안티패스백 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+            entryArmingLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 입실 경비(Arming) 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+
+            # --- [보안 설정 - 퇴실 (Exit)] ---
+            exitSecurityThresholdId:
+              type: "string"
+              format: "uuid"
+              nullable: true
+              description: "[하이브리드] 퇴실 보안 임계값 ID (우선 적용)"
+            exitAccessLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 퇴실 출입 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+            exitAntipassbackLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 퇴실 안티패스백 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+            exitArmingLevel:
+              type: "integer"
+              nullable: true
+              default: 0
+              minimum: 0
+              description: "[하이브리드] 퇴실 경비(Arming) 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+        devices:
+          type: "array"
+          description: "출입 포인트 생성 시 연결할 장비 목록"
+          items:
+            $ref: "#/components/schemas/AccessPointDeviceRequest"
 
     AccessPointConfig:
       type: "object"
+      description: "출입 지점의 보안 정책 설정 정보 (하이브리드 지원)"
       properties:
-        id:
+        
+        # --- [입실] ---
+        entrySecurityThresholdId:
           type: "string"
           format: "uuid"
-        accessPointId:
-          type: "string"
-          format: "uuid"
-          description: "Space Service의 Access Point ID"
-        entryAccessThresholdId:
-          type: "string"
-          format: "uuid"
-          description: "입실 시 요구되는 최소 보안 임계값 ID"
+          description: "입실 보안 임계값 ID"
           nullable: true
-        entryAuthenticationRuleId:
+        entryAccessLevel:
+          type: "integer"
+          description: "입실 출입 레벨"
+          nullable: true
+        entryAntipassbackLevel:
+          type: "integer"
+          description: "입실 안티패스백 레벨"
+          nullable: true
+        entryArmingLevel:
+          type: "integer"
+          description: "입실 경비 레벨"
+          nullable: true
+        
+        # --- [퇴실] ---
+        exitSecurityThresholdId:
           type: "string"
           format: "uuid"
-          description: "입실 시 적용할 인증 규칙 ID"
+          description: "퇴실 보안 임계값 ID"
           nullable: true
-        exitAccessThresholdId:
-          type: "string"
-          format: "uuid"
-          description: "퇴실 시 요구되는 최소 보안 임계값 ID"
+        exitAccessLevel:
+          type: "integer"
+          description: "퇴실 출입 레벨"
           nullable: true
-        exitAuthenticationRuleId:
-          type: "string"
-          format: "uuid"
-          description: "퇴실 시 적용할 인증 규칙 ID"
+        exitAntipassbackLevel:
+          type: "integer"
+          description: "퇴실 안티패스백 레벨"
           nullable: true
-        isActive:
-          type: "boolean"
-        createdAt:
-          type: "string"
-          format: "date-time"
-        updatedAt:
-          type: "string"
-          format: "date-time"
+        exitArmingLevel:
+          type: "integer"
+          description: "퇴실 경비 레벨"
+          nullable: true
 
-    AccessPointConfigRequest:
-      type: "object"
-      properties:
-        entryAccessThresholdId:
-          type: "string"
-          format: "uuid"
-          description: "입실 시 요구되는 최소 보안 임계값 ID"
-          nullable: true
-        entryAuthenticationRuleId:
-          type: "string"
-          format: "uuid"
-          description: "입실 시 적용할 인증 규칙 ID"
-          nullable: true
-        exitAccessThresholdId:
-          type: "string"
-          format: "uuid"
-          description: "퇴실 시 요구되는 최소 보안 임계값 ID"
-          nullable: true
-        exitAuthenticationRuleId:
-          type: "string"
-          format: "uuid"
-          description: "퇴실 시 적용할 인증 규칙 ID"
-          nullable: true
-        isActive:
-          type: "boolean"
-          default: true
-
-    AccessGroup:
+    AccessPointSummary:
       type: "object"
       properties:
         id:
           type: "string"
           format: "uuid"
-        organizationId:
+        name:
+          type: "string"
+          example: "본관 1층 정문"
+
+    AccessPointGroup:
+      type: "object"
+      properties:
+        id:
           type: "string"
           format: "uuid"
         name:
@@ -2092,12 +2469,11 @@ components:
           example: "1층 전체 출입문"
         description:
           type: "string"
-        accessPointIds:
+        accessPoints:
           type: "array"
-          description: "그룹에 포함된 출입 포인트 ID 목록"
+          description: "그룹에 포함된 출입 포인트 목록 (ID + 이름)"
           items:
-            type: "string"
-            format: "uuid"
+            $ref: "#/components/schemas/AccessPointSummary"
         isActive:
           type: "boolean"
         createdAt:
@@ -2107,13 +2483,10 @@ components:
           type: "string"
           format: "date-time"
 
-    AccessGroupRequest:
+    AccessPointGroupRequest:
       type: "object"
       required: ["name"]
       properties:
-        organizationId:
-          type: "string"
-          format: "uuid"
         name:
           type: "string"
         description:
@@ -2124,8 +2497,110 @@ components:
           items:
             type: "string"
             format: "uuid"
+
+    # ----------------------------------------------------
+    # 4. Access Rules (Priority-Based)
+    # ----------------------------------------------------
+    AccessRule:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          example: "정규직 평일 출입"
+        description:
+          type: "string"
+        priority:
+          type: "integer"
+          description: "우선순위 (0~255). 높은 값이 낮은 값을 이깁니다. (Override)"
+          example: 10
+        items:
+          type: "array"
+          items:
+            $ref: "#/components/schemas/AccessRuleItem"
+        isActive:
+          type: "boolean"
+        createdAt:
+          type: "string"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+
+    AccessRuleItem:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        accessRuleId:
+          type: "string"
+          format: "uuid"
+        accessPointId:
+          type: "string"
+          format: "uuid"
+          description: "개별 출입문 ID (그룹과 둘 중 하나만 존재)"
+          nullable: true
+        accessPointGroupId:
+          type: "string"
+          format: "uuid"
+          description: "출입문 그룹 ID (개별 문과 둘 중 하나만 존재)"
+          nullable: true
+        targetName:
+          type: "string"
+          description: "[Read-Only] 대상 이름 (출입문명 또는 그룹명)"
+          readOnly: true
+        timeScheduleId:
+          type: "string"
+          format: "uuid"
+          description: "적용할 시간 스케줄 ID"
+        timeScheduleName:
+          type: "string"
+          description: "[Read-Only] 시간 스케줄 이름"
+          readOnly: true
+
+    AccessRuleItemRequest:
+      type: "object"
+      required: ["timeScheduleId"]
+      properties:
+        accessPointId:
+          type: "string"
+          format: "uuid"
+          description: "개별 출입문 ID (그룹 ID가 없으면 필수)"
+          nullable: true
+        accessPointGroupId:
+          type: "string"
+          format: "uuid"
+          description: "출입문 그룹 ID (개별 문 ID가 없으면 필수)"
+          nullable: true
+        timeScheduleId:
+          type: "string"
+          format: "uuid"
+
+    AccessRuleRequest:
+      type: "object"
+      required: ["name", "priority", "items"]
+      properties:
+        name:
+          type: "string"
+        description:
+          type: "string"
+        priority:
+          type: "integer"
+          minimum: 0
+          maximum: 255
+          default: 0
+          description: "우선순위 (0~255). 높은 값이 승리."
+        items:
+          type: "array"
+          minItems: 1
+          items:
+            $ref: "#/components/schemas/AccessRuleItemRequest"
         isActive:
           type: "boolean"
           default: true
-
-    
