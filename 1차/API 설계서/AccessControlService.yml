@@ -2675,6 +2675,7 @@ components:
 
     AccessPointSummary:
       type: "object"
+      description: "그룹 조회 시 포함되는 출입 포인트의 상세 요약 정보"
       properties:
         id:
           type: "string"
@@ -2682,6 +2683,57 @@ components:
         name:
           type: "string"
           example: "본관 1층 정문"
+        code:
+          type: "string"
+          description: "출입 포인트 코드"
+          example: "AP-ENT-001"
+        description:
+          type: "string"
+          description: "출입 포인트 설명"
+        
+        siteId:
+          type: "string"
+          format: "uuid"
+          description: "[Read-Only] 소속 사이트 ID"
+          readOnly: true
+        siteName:
+          type: "string"
+          description: "[Read-Only] 소속 사이트명"
+          readOnly: true
+          example: "판교 캠퍼스"
+        
+        facilityId:
+          type: "string"
+          format: "uuid"
+          description: "[Read-Only] 소속 시설물 ID"
+          readOnly: true
+        facilityName:
+          type: "string"
+          description: "[Read-Only] 소속 시설물명"
+          readOnly: true
+          example: "본관"
+        
+        sectorId:
+          type: "string"
+          format: "uuid"
+          description: "[Read-Only] 소속 구획 ID"
+          readOnly: true
+        sectorName:
+          type: "string"
+          description: "[Read-Only] 소속 구획명"
+          readOnly: true
+          example: "1F"
+        
+        areaId:
+          type: "string"
+          format: "uuid"
+          description: "[Read-Only] 소속 구역 ID"
+          readOnly: true
+        areaName:
+          type: "string"
+          description: "[Read-Only] 소속 구역명"
+          readOnly: true
+          example: "로비"
 
     AccessPointGroup:
       type: "object"
@@ -2696,7 +2748,7 @@ components:
           type: "string"
         accessPoints:
           type: "array"
-          description: "그룹에 포함된 출입 포인트 목록 (ID + 이름)"
+          description: "그룹에 포함된 출입 포인트 목록 (상세 정보 포함)"
           items:
             $ref: "#/components/schemas/AccessPointSummary"
         isActive:
