@@ -19,8 +19,9 @@ info:
   version: "1.0.1"
   contact:
     name: "Jehyun Kim"
+
 servers:
-  - url: "http://localhost:4300/api"
+  - url: "http://localhost:4300/api/v1/access-control"
     description: "로컬 개발 서버"     
 
 tags:
@@ -28,8 +29,8 @@ tags:
     description: "시간 정책 (스케쥴 및 공휴일) 관리"
   - name: "2. Security Level Management"
     description: "보안 등급(Clearance) 및 임계값(Threshold) 관리"
-  - name: "3. Access Point Management"
-    description: "출입 포인트 관리 (보안 설정, 그룹핑, 장비 CRUD 통합)"
+  - name: "3. Access Point Group Management"
+    description: "출입 포인트 그룹 관리 (보안 설정, 그룹핑, 장비 CRUD 통합)"
   - name: "4. Access Rules"
     description: "출입 규칙(Where + When) 정의 및 우선순위 관리"
   - name: "5. Personnels"
@@ -1215,211 +1216,11 @@ paths:
           $ref: "#/components/responses/NotFound"
 
   # ==========================================
-  # 3. Access Point Management
+  # 3. Access Point Group Management
   # ==========================================
-  /access-points:
-    get:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트(Access Point) 목록 조회"
-      description: |
-        물리적 출입 포인트 목록을 조회합니다.<br>
-        상위 공간(`site`, `facility`, `sector`) 및 구역(`area`)별 조회나 타입(`type`)별 필터링을 지원합니다.
-      parameters:
-        - name: "organizationId"
-          in: "query"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "siteId"
-          in: "query"
-          description: "소속 사이트 ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "facilityId"
-          in: "query"
-          description: "소속 시설물(건물) ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "sectorId"
-          in: "query"
-          description: "소속 구획(층) ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "areaId"
-          in: "query"
-          description: "소속 구역 ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "name"
-          in: "query"
-          description: "출입 포인트명 검색 (부분 일치)"
-          schema:
-            type: "string"
-        - name: "type"
-          in: "query"
-          description: "출입 포인트 타입 필터"
-          schema:
-            type: "string"
-            enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
-        - name: "isActive"
-          in: "query"
-          schema:
-            type: "boolean"
-        - name: "page"
-          in: "query"
-          schema:
-            type: "integer"
-            default: 0
-        - name: "size"
-          in: "query"
-          schema:
-            type: "integer"
-            default: 1000
-        - name: "sort"
-          in: "query"
-          description: |
-            정렬 기준 (형식: 필드명,정렬방향)<br>
-            예: name,asc (이름순), createdAt,desc (최신순)<br>
-            다중 정렬 가능
-          schema:
-            type: "array"
-            items:
-              type: "string"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  content:
-                    type: "array"
-                    items:
-                      $ref: "#/components/schemas/AccessPoint"
-                  page:
-                    $ref: "#/components/schemas/PageMetadata"
-    post:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트 생성"
-      description: |
-        새로운 물리적 출입 포인트을 생성합니다.
-        
-        **주요 특징:**
-        - **공간 정보:** `siteId`, `facilityId`, `sectorId`, `areaId` 중 하나 이상을 입력하여 위치를 지정할 수 있습니다. (모두 선택 사항)
-        - **보안 설정:** 입실/퇴실에 대한 인증 규칙(`AuthenticationRule`)과 최소 보안 임계값(`SecurityThreshold`)을 직접 설정합니다.
-        - **장비 연결:** `devices` 배열을 통해 입/출 리더기나 컨트롤러 등 물리적 장비를 즉시 연결할 수 있습니다.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessPointRequest"
-      responses:
-        '200':
-          description: "생성됨"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '409':
-          $ref: "#/components/responses/Conflict"
-
-  /access-points/types:
-    get:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트 타입 목록 조회"
-      description: |
-        시스템에서 지원하는 출입 포인트 타입(Enum) 목록을 조회합니다.<br>
-        출입 포인트 타입(Enum) 목록:<br>
-        `"DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"`<br>
-        UI 드롭다운(Select Box) 구성에 사용됩니다.<br>
-        반환 예시: <br>
-        `[{ "code": "DOOR", "label": "일반 출입문" }, { "code": "TURNSTILE", "label": "스피드 게이트" }]`
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/AccessPointType"  
-
-  /access-points/{id}:
-    get:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트 단건 조회"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '404':
-          $ref: "#/components/responses/NotFound"
-
-    put:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트 수정"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessPointRequest"
-      responses:
-        '200':
-          description: "수정됨"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '404':
-          $ref: "#/components/responses/NotFound"
-        '409':
-          $ref: "#/components/responses/Conflict"
-
-    delete:
-      tags: ["3. Access Point Management"]
-      summary: "출입 포인트 삭제"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      responses:
-        '200':
-          description: "삭제 성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DeleteResult"
-        '404':
-          $ref: "#/components/responses/NotFound"
-
   /access-point-groups:
     get:
-      tags: ["3. Access Point Management"]
+      tags: ["3. Access Point Group Management"]
       summary: "출입 포인트 그룹 목록 조회"
       description: |
         출입 포인트 그룹 목록을 조회합니다.<br>
@@ -1486,7 +1287,7 @@ paths:
                     $ref: "#/components/schemas/PageMetadata"
 
     post:
-      tags: ["3. Access Point Management"]
+      tags: ["3. Access Point Group Management"]
       summary: "출입 포인트 그룹 생성"
       description: |
         새로운 출입 포인트 그룹을 생성합니다.<br>
@@ -1508,7 +1309,7 @@ paths:
 
   /access-point-groups/{id}:
     get:
-      tags: ["3. Access Point Management"]
+      tags: ["3. Access Point Group Management"]
       summary: "출입 포인트 그룹 단건 조회"
       parameters:
         - name: "id"
@@ -1528,7 +1329,7 @@ paths:
           $ref: "#/components/responses/NotFound"
 
     put:
-      tags: ["3. Access Point Management"]
+      tags: ["3. Access Point Group Management"]
       summary: "출입 포인트 그룹 수정"
       description: |
         출입 포인트 그룹 정보를 전체 수정합니다.<br>
@@ -1558,7 +1359,7 @@ paths:
           $ref: "#/components/responses/Conflict"
 
     delete:
-      tags: ["3. Access Point Management"]
+      tags: ["3. Access Point Group Management"]
       summary: "출입 포인트 그룹 삭제"
       parameters:
         - name: "id"
@@ -2366,7 +2167,7 @@ components:
           default: true
 
     # ----------------------------------------------------
-    # 3. Access Point Management
+    # 3. Access Point Group Management
     # ----------------------------------------------------
     AccessPointType:
       type: "object"

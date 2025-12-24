@@ -1,0 +1,1268 @@
+openapi: "3.0.1"
+info:
+  title: "HR Service API"
+  description: |
+    인사 및 조직 관리 서비스(HR Service)를 위한 REST API 명세서입니다.<br>
+    조직 구조, 직무/직책/직급 체계, 직원 프로필 및 발령 정보를 관리합니다.
+  version: "1.0.0"
+  contact:
+    name: "Jehyun Kim"
+servers:
+  - url: "http://localhost:4300/api"
+    description: "로컬 개발 서버"
+
+tags:
+  - name: "1. Organization Management"
+    description: "조직(Tenant) 관리"
+  - name: "2. Department Management"
+    description: "부서 구조 관리"
+  - name: "3. Job Management"
+    description: "직무(Job) 기준 정보 관리"
+  - name: "4. Position Management"
+    description: "직책(Position) 기준 정보 관리"
+  - name: "5. Grade Management"
+    description: "직급(Grade) 기준 정보 관리"
+  - name: "6. Employee Management"
+    description: "직원 프로필 관리"
+  - name: "7. Assignment Management"
+    description: "인사 발령 및 이력 관리"
+
+paths:
+  # ==========================================
+  # 1. Organization Management
+  # ==========================================
+  /organizations:
+    get:
+      tags: ["1. Organization Management"]
+      summary: "조직(Tenant) 목록 조회"
+      description: |
+        시스템에 등록된 최상위 조직(고객사) 목록을 조회합니다.
+      parameters:
+        - name: "name"
+          in: "query"
+          description: "조직명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Organization"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+    post:
+      tags: ["1. Organization Management"]
+      summary: "조직 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+
+  /organizations/{id}:
+    get:
+      tags: ["1. Organization Management"]
+      summary: "조직 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+    put:
+      tags: ["1. Organization Management"]
+      summary: "조직 정보 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/OrganizationRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Organization"
+    delete:
+      tags: ["1. Organization Management"]
+      summary: "조직 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 2. Department Management
+  # ==========================================
+  /departments:
+    get:
+      tags: ["2. Department Management"]
+      summary: "부서 목록 조회 (계층형 트리 구조 지원)"
+      description: |
+        부서 목록을 조회합니다.<br>
+        `parentDepartmentId`를 통해 계층 구조를 표현할 수 있습니다.
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          description: "조직 ID 필터 (관리자용)"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "부서명 검색"
+          schema:
+            type: "string"
+        - name: "parentDepartmentId"
+          in: "query"
+          description: "특정 상위 부서의 하위 부서만 조회"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Department"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+    post:
+      tags: ["2. Department Management"]
+      summary: "부서 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+
+  /departments/{id}:
+    get:
+      tags: ["2. Department Management"]
+      summary: "부서 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    put:
+      tags: ["2. Department Management"]
+      summary: "부서 정보 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DepartmentRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Department"
+    delete:
+      tags: ["2. Department Management"]
+      summary: "부서 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 3. Job Management
+  # ==========================================
+  /jobs:
+    get:
+      tags: ["3. Job Management"]
+      summary: "직무(Job) 목록 조회"
+      description: "예: 개발, 영업, 인사 등 수행하는 업무의 종류"
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          schema:
+            type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Job"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["3. Job Management"]
+      summary: "직무 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+
+  /jobs/{id}:
+    get:
+      tags: ["3. Job Management"]
+      summary: "직무 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+    put:
+      tags: ["3. Job Management"]
+      summary: "직무 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/JobRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Job"
+    delete:
+      tags: ["3. Job Management"]
+      summary: "직무 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 4. Position Management
+  # ==========================================
+  /positions:
+    get:
+      tags: ["4. Position Management"]
+      summary: "직책(Position) 목록 조회"
+      description: "예: 팀장, 본부장, 파트장 등 맡은 역할"
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          schema:
+            type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Position"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["4. Position Management"]
+      summary: "직책 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+
+  /positions/{id}:
+    get:
+      tags: ["4. Position Management"]
+      summary: "직책 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+    put:
+      tags: ["4. Position Management"]
+      summary: "직책 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/PositionRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Position"
+    delete:
+      tags: ["4. Position Management"]
+      summary: "직책 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 5. Grade Management
+  # ==========================================
+  /grades:
+    get:
+      tags: ["5. Grade Management"]
+      summary: "직급(Grade) 목록 조회"
+      description: "예: 사원, 대리, 과장 (서열 순서 포함)"
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          schema:
+            type: "string"
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: step,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Grade"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["5. Grade Management"]
+      summary: "직급 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GradeRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Grade"
+
+  /grades/{id}:
+    get:
+      tags: ["5. Grade Management"]
+      summary: "직급 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Grade"
+    put:
+      tags: ["5. Grade Management"]
+      summary: "직급 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GradeRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Grade"
+    delete:
+      tags: ["5. Grade Management"]
+      summary: "직급 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 6. Employee Management
+  # ==========================================
+  /employees:
+    get:
+      tags: ["6. Employee Management"]
+      summary: "직원(Employee) 목록 조회"
+      description: |
+        직원 목록을 조회합니다.<br>
+        개인정보(이름, 이메일 등)는 DB에 암호화되어 저장되지만, 조회 시에는 복호화된 평문으로 반환됩니다.
+      parameters:
+        - name: "organizationId"
+          in: "query"
+          description: "조직 ID 필터 (관리자용)"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "name"
+          in: "query"
+          description: "이름 검색"
+          schema:
+            type: "string"
+        - name: "employeeNumber"
+          in: "query"
+          description: "사번 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "departmentId"
+          in: "query"
+          description: "소속 부서 ID 필터"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "jobId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "positionId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "gradeId"
+          in: "query"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Employee"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+    post:
+      tags: ["6. Employee Management"]
+      summary: "직원 등록"
+      description: |
+        새로운 직원을 등록합니다.<br>
+        필수 정보인 이름, 사번 등과 함께 현재 소속(발령) 정보(`assignment`)를 입력받아 초기 발령 상태를 생성합니다.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+        '409':
+          description: "이미 존재하는 사번입니다."
+
+  /employees/{id}:
+    get:
+      tags: ["6. Employee Management"]
+      summary: "직원 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+    put:
+      tags: ["6. Employee Management"]
+      summary: "직원 정보 수정"
+      description: |
+        직원의 기본 프로필 정보를 수정합니다.<br>
+        **주의:** 소속 부서나 직급 변경은 이 API가 아닌 **인사 발령(Assignment) API**를 사용해야 이력이 관리됩니다.
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/EmployeeUpdateRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Employee"
+
+    delete:
+      tags: ["6. Employee Management"]
+      summary: "직원 삭제 (퇴사 처리)"
+      description: |
+        직원을 삭제(Soft Delete)합니다. 퇴사 처리와 동일한 효과를 가집니다.
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+    
+  # ==========================================
+  # 7. Assignment Management (신규)
+  # ==========================================
+  /assignments:
+    post:
+      tags: ["7. Assignment Management"]
+      summary: "인사 발령(소속 변경) 실행"
+      description: |
+        특정 직원의 소속 정보(부서, 직무, 직책, 직급)를 변경합니다.<br>
+        발령이 실행되면 `EmployeeAssignment`가 업데이트되고, 이전 상태는 `EmployeeAssignmentHistory`에 기록됩니다.
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AssignmentRequest"
+      responses:
+        '200':
+          description: "발령 처리됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/EmployeeAssignment"
+
+  /assignments/histories:
+    get:
+      tags: ["7. Assignment Management"]
+      summary: "발령 이력 조회"
+      description: "특정 직원의 과거 소속 변경 이력을 조회합니다."
+      parameters:
+        - name: "employeeId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/AssignmentHistory"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+
+components:
+  schemas:
+    PageMetadata:
+      type: "object"
+      properties:
+        size:
+          type: "integer"
+        page:
+          type: "integer"
+        totalElements:
+          type: "integer"
+        totalPages:
+          type: "integer"
+        isLast:
+          type: "boolean"
+        hasNext:
+          type: "boolean"
+
+    DeleteResult:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        isSoftDeleted:
+          type: "boolean"
+        isHardDeleted:
+          type: "boolean"
+
+    # --- HR Schemas ---
+    Organization:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          example: "삼성전자"
+        code:
+          type: "string"
+          example: "SAMSUNG"
+        businessRegistrationNumber:
+          type: "string"
+          description: "사업자등록번호 (복호화됨)"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+        createdAt:
+          type: "string"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+
+    OrganizationRequest:
+      type: "object"
+      required: ["name"]
+      properties:
+        name:
+          type: "string"
+        code:
+          type: "string"
+        businessRegistrationNumber:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+          default: true
+
+    Department:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        parentDepartmentId:
+          type: "string"
+          format: "uuid"
+          description: "상위 부서 ID"
+          nullable: true
+        parentDepartmentName:
+          type: "string"
+          description: "[Read-Only] 상위 부서명"
+          readOnly: true
+          nullable: true
+        name:
+          type: "string"
+          example: "개발팀"
+        code:
+          type: "string"
+          example: "DEPT-DEV-01"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+        createdAt:
+          type: "string"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+
+    DepartmentRequest:
+      type: "object"
+      required: ["name"]
+      properties:
+        parentDepartmentId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        name:
+          type: "string"
+        code:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+          default: true
+
+    Job:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          example: "소프트웨어 개발"
+        code:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+
+    JobRequest:
+      type: "object"
+      required: ["name"]
+      properties:
+        name:
+          type: "string"
+        code:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+          default: true
+
+    Position:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          example: "팀장"
+        code:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+
+    PositionRequest:
+      type: "object"
+      required: ["name"]
+      properties:
+        name:
+          type: "string"
+        code:
+          type: "string"
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+          default: true
+
+    Grade:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        name:
+          type: "string"
+          example: "책임"
+        code:
+          type: "string"
+        step:
+          type: "integer"
+          description: "직급 서열 (높을수록 상위 직급)"
+          example: 3
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+
+    GradeRequest:
+      type: "object"
+      required: ["name", "step"]
+      properties:
+        name:
+          type: "string"
+        code:
+          type: "string"
+        step:
+          type: "integer"
+          default: 0
+        description:
+          type: "string"
+        isActive:
+          type: "boolean"
+          default: true
+
+    # --- Employee & Assignment ---
+    EmployeeAssignment:
+      type: "object"
+      description: "직원의 현재 발령(소속) 상태"
+      properties:
+        departmentId:
+          type: "string"
+          format: "uuid"
+        departmentName:
+          type: "string"
+          readOnly: true
+        jobId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        jobName:
+          type: "string"
+          readOnly: true
+          nullable: true
+        positionId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        positionName:
+          type: "string"
+          readOnly: true
+          nullable: true
+        gradeId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        gradeName:
+          type: "string"
+          readOnly: true
+          nullable: true
+
+    Employee:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        organizationId:
+          type: "string"
+          format: "uuid"
+        userId:
+          type: "string"
+          format: "uuid"
+          description: "시스템 로그인 계정 ID (연동된 경우)"
+          nullable: true
+        
+        # 개인정보 (복호화된 평문)
+        name:
+          type: "string"
+          example: "홍길동"
+        employeeNumber:
+          type: "string"
+          description: "사번"
+          example: "20230001"
+        email:
+          type: "string"
+          format: "email"
+        phoneNumber:
+          type: "string"
+        birthDate:
+          type: "string"
+          format: "date"
+        address:
+          type: "string"
+
+        # 현재 소속 정보 (Flat하게 제공하거나 객체로 제공 가능, 여기서는 객체로 포함)
+        currentAssignment:
+          $ref: "#/components/schemas/EmployeeAssignment"
+
+        isActive:
+          type: "boolean"
+        createdAt:
+          type: "string"
+          format: "date-time"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+
+    EmployeeRequest:
+      type: "object"
+      required: ["name", "employeeNumber", "departmentId"]
+      description: "직원 생성 요청 (기본 프로필 + 초기 발령 정보)"
+      properties:
+        # 기본 프로필
+        name:
+          type: "string"
+        employeeNumber:
+          type: "string"
+        email:
+          type: "string"
+          format: "email"
+        phoneNumber:
+          type: "string"
+        birthDate:
+          type: "string"
+          format: "date"
+        address:
+          type: "string"
+        userId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        
+        # 초기 발령 정보 (필수)
+        departmentId:
+          type: "string"
+          format: "uuid"
+          description: "초기 배정 부서 ID"
+        jobId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        positionId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        gradeId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+
+        isActive:
+          type: "boolean"
+          default: true
+
+    EmployeeUpdateRequest:
+      type: "object"
+      description: "직원 프로필 수정 요청 (소속 변경 제외)"
+      properties:
+        name:
+          type: "string"
+        email:
+          type: "string"
+          format: "email"
+        phoneNumber:
+          type: "string"
+        birthDate:
+          type: "string"
+          format: "date"
+        address:
+          type: "string"
+        userId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        isActive:
+          type: "boolean"
+          
+    # --- Assignment Management Schemas ---
+    AssignmentRequest:
+      type: "object"
+      required: ["employeeId", "departmentId"]
+      description: "발령 요청 객체"
+      properties:
+        employeeId:
+          type: "string"
+          format: "uuid"
+        departmentId:
+          type: "string"
+          format: "uuid"
+        jobId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        positionId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        gradeId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+        note:
+          type: "string"
+          description: "발령 사유 및 메모"
+    
+    AssignmentHistory:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        employeeId:
+          type: "string"
+          format: "uuid"
+        departmentName:
+          type: "string"
+          description: "당시 부서명 (스냅샷)"
+        jobName:
+          type: "string"
+          description: "당시 직무명 (스냅샷)"
+          nullable: true
+        positionName:
+          type: "string"
+          description: "당시 직책명 (스냅샷)"
+          nullable: true
+        gradeName:
+          type: "string"
+          description: "당시 직급명 (스냅샷)"
+          nullable: true
+        note:
+          type: "string"
+          description: "발령 사유 (복호화됨)"
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "발령 일시"
