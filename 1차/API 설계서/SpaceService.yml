@@ -17,19 +17,18 @@ tags:
     description: 출입 지점(문/게이트) 관리
 
 paths:
+  # ==========================================
+  # 5. Access Point Management
+  # ==========================================
   /access-points:
     get:
       tags: ["5. Access Point Management"]
       summary: "출입 포인트(Access Point) 목록 조회"
       description: |
         물리적 출입 포인트 목록을 조회합니다.<br>
-        상위 공간(`site`, `facility`, `sector`) 및 구역(`area`)별 조회나 타입(`type`)별 필터링을 지원합니다.
+        상위 공간(`site`, `facility`, `sector`) 및 구역(`area`)별 조회나 타입(`type`)별 필터링을 지원합니다.<br>
+        **Note:** `tenantId`는 인증 토큰(JWT)에서 자동으로 추출하여 필터링합니다.
       parameters:
-        - name: "organizationId"
-          in: "query"
-          schema:
-            type: "string"
-            format: "uuid"
         - name: "siteId"
           in: "query"
           description: "소속 사이트 ID 필터"
@@ -102,7 +101,7 @@ paths:
                     items:
                       $ref: "#/components/schemas/AccessPoint"
                   page:
-                    $ref: "#/components/schemas/PageMetadata"
+                    $ref: "#/components/schemas/PageMetadata"  
     post:
       tags: ["5. Access Point Management"]
       summary: "출입 포인트 생성"
@@ -344,12 +343,28 @@ components:
         portIndex:
           type: "integer"
           description: "연결 포트 번호" 
-        authenticationModes:
-          type: "array"
-          items:
-            type: "string"
-            enum: ["CARD", "PIN", "BIOMETRIC", "MOBILE"]
-          description: "인증 타입 (리더기인 경우)"
+        authenticationMode:
+          type: "string"
+          description: | 
+            해당 리더기에서 사용할 인증 조합 모드.<br>
+            반드시 해당 장비가 지원하는 기능(Capability) 내에서 설정해야 합니다.
+          enum: 
+            - "CARD_ONLY"
+            - "PIN_ONLY"
+            - "BIOMETRIC_ONLY"
+            - "MOBILE_ONLY"
+            - "QR_ONLY"
+            - "FACE_ONLY"
+            - "CARD_AND_PIN"
+            - "CARD_AND_BIOMETRIC"
+            - "CARD_AND_MOBILE"
+            - "CARD_AND_QR"
+            - "CARD_AND_FACE"
+            - "CARD_OR_PIN"
+            - "CARD_OR_BIOMETRIC"
+            - "CARD_OR_MOBILE"
+            - "CARD_OR_QR"
+            - "CARD_OR_FACE"
 
     AccessPointRequest:
       type: "object"
@@ -375,7 +390,18 @@ components:
           type: "string"
           format: "uuid"
           nullable: true
-          description: "소속 층/구획 ID (선택)"
+          description: "소속 구획(층(Floore), 평면 구역(Section)) ID (선택)"
+        sectorInfo:
+          type: "object"
+          nullable: true
+          description: "소속 구획(층(Floore), 평면 구역(Section)) 정보 (직접 입력용, 선택 사항)"
+          properties:
+            name:
+              type: "string"
+              description: "구획(Floore), 평면 구역(Section)명"
+            description:
+              type: "string"
+              description: "구획(Floore), 평면 구역(Section) 설명"
         areaId:
           type: "string"
           format: "uuid"
@@ -405,7 +431,6 @@ components:
           description: "하드웨어 제어 설정 (개방 시간 등)"
         securityConfig:
           type: "object"
-          required: ["entryAuthenticationRuleId", "exitAuthenticationRuleId"]
           properties:
             # --- [보안 설정 - 입실 (Entry)] ---
             entrySecurityThresholdId:
@@ -552,7 +577,7 @@ components:
         sectorName:
           type: "string"
           description: "[Read-Only] 소속 구획명"
-          example: "3층"
+          example: "3F"
           readOnly: true
         areaName:
           type: "string"
@@ -616,9 +641,26 @@ components:
         portIndex:
           type: "integer"
           description: "컨트롤러 연결 포트 번호 (선택 사항)"
-        authenticationModes:
-          type: "array"
-          items:
-            type: "string"
-            enum: ["CARD", "PIN", "BIOMETRIC", "MOBILE"]
-          description: "인증 타입 (리더기인 경우, 선택 사항)"
+        authenticationMode:
+          type: "string"
+          description: | 
+            해당 리더기에서 사용할 인증 조합 모드.<br>
+            반드시 해당 장비가 지원하는 기능(Capability) 내에서 설정해야 합니다.
+          enum: 
+            - "CARD_ONLY"
+            - "PIN_ONLY"
+            - "BIOMETRIC_ONLY"
+            - "MOBILE_ONLY"
+            - "QR_ONLY"
+            - "FACE_ONLY"
+            - "CARD_AND_PIN"
+            - "CARD_AND_BIOMETRIC"
+            - "CARD_AND_MOBILE"
+            - "CARD_AND_QR"
+            - "CARD_AND_FACE"
+            - "CARD_OR_PIN"
+            - "CARD_OR_BIOMETRIC"
+            - "CARD_OR_MOBILE"
+            - "CARD_OR_QR"
+            - "CARD_OR_FACE"
+            

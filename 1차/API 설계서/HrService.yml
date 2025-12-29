@@ -8,7 +8,7 @@ info:
   contact:
     name: "Jehyun Kim"
 servers:
-  - url: "http://localhost:4300/api"
+  - url: "http://localhost:4300/api/v1/hr"
     description: "로컬 개발 서버"
 
 tags:
@@ -36,11 +36,27 @@ paths:
       tags: ["1. Organization Management"]
       summary: "조직(Tenant) 목록 조회"
       description: |
-        시스템에 등록된 최상위 조직(고객사) 목록을 조회합니다.
+        시스템에 등록된 최상위 조직 목록을 조회합니다.<br>
+        목록 조회 시 **사업자등록번호는 마스킹 처리**되어 반환됩니다.
       parameters:
         - name: "name"
           in: "query"
           description: "조직명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "조직 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "businessRegistrationNumber"
+          in: "query"
+          description: "사업자등록번호 검색 (일치, 하이픈 포함/미포함)"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "조직 설명 검색 (부분 일치)"
           schema:
             type: "string"
         - name: "isActive"
@@ -57,6 +73,13 @@ paths:
           schema:
             type: "integer"
             default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -68,7 +91,7 @@ paths:
                   content:
                     type: "array"
                     items:
-                      $ref: "#/components/schemas/Organization"
+                      $ref: "#/components/schemas/OrganizationSummary"
                   page:
                     $ref: "#/components/schemas/PageMetadata"
 
@@ -159,13 +182,23 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
-          description: "조직 ID 필터 (관리자용)"
+          description: "조직 ID 필터. 미입력 시 요청 사용자(토큰)의 소속 조직 데이터만 조회합니다. (시스템 관리자만 타 조직 조회 가능)"
           schema:
             type: "string"
             format: "uuid"
         - name: "name"
           in: "query"
           description: "부서명 검색"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "부서 코드 검색"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "부서 설명 검색 (부분 일치)"
           schema:
             type: "string"
         - name: "parentDepartmentId"
@@ -178,6 +211,23 @@ paths:
           in: "query"
           schema:
             type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -278,13 +328,46 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
+          description: "조직 ID 필터. 미입력 시 요청 사용자(토큰)의 소속 조직 데이터만 조회합니다. (시스템 관리자만 타 조직 조회 가능)"
           schema:
             type: "string"
             format: "uuid"
         - name: "name"
           in: "query"
+          description: "직무명 검색"
           schema:
             type: "string"
+        - name: "code"
+          in: "query"
+          description: "직무 코드 검색"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "직무 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -384,13 +467,46 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
+          description: "조직 ID 필터. 미입력 시 요청 사용자(토큰)의 소속 조직 데이터만 조회합니다. (시스템 관리자만 타 조직 조회 가능)"
           schema:
             type: "string"
             format: "uuid"
         - name: "name"
           in: "query"
+          description: "직책명 검색"
           schema:
             type: "string"
+        - name: "code"
+          in: "query"
+          description: "직책 코드 검색"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "직책 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: name,asc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -490,13 +606,29 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
+          description: "조직 ID 필터. 미입력 시 요청 사용자(토큰)의 소속 조직 데이터만 조회합니다. (시스템 관리자만 타 조직 조회 가능)"
           schema:
             type: "string"
             format: "uuid"
         - name: "name"
           in: "query"
+          description: "직급명 검색"
           schema:
             type: "string"
+        - name: "code"
+          in: "query"
+          description: "직급 코드 검색"
+          schema:
+            type: "string"
+        - name: "description"
+          in: "query"
+          description: "직급 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          schema:
+            type: "boolean"
         - name: "sort"
           in: "query"
           description: "정렬 기준 (예: step,asc)"
@@ -504,6 +636,16 @@ paths:
             type: "array"
             items:
               type: "string"
+        - name: "page"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          schema:
+            type: "integer"
+            default: 1000
       responses:
         '200':
           description: "성공"
@@ -605,7 +747,7 @@ paths:
       parameters:
         - name: "organizationId"
           in: "query"
-          description: "조직 ID 필터 (관리자용)"
+          description: "조직 ID 필터. 미입력 시 요청 사용자(토큰)의 소속 조직 데이터만 조회합니다. (시스템 관리자만 타 조직 조회 가능)"
           schema:
             type: "string"
             format: "uuid"
@@ -614,9 +756,14 @@ paths:
           description: "이름 검색"
           schema:
             type: "string"
-        - name: "employeeNumber"
+        - name: "employeeCode"
           in: "query"
           description: "사번 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "email"
+          in: "query"
+          description: "이메일 검색"
           schema:
             type: "string"
         - name: "departmentId"
@@ -640,6 +787,63 @@ paths:
           schema:
             type: "string"
             format: "uuid"
+        - name: "userId"
+          in: "query"
+          description: "시스템 사용자 ID 필터"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "employmentType"
+          in: "query"
+          description: "고용 형태 (REGULAR, CONTRACT, DISPATCHED, PARTNER...)"
+          schema:
+            type: "string"
+            enum: ["REGULAR", "CONTRACT", "DISPATCHED", "PARTNER", "INTERN", "FREELANCER"]
+        - name: "partnerCompanyName"
+          in: "query"
+          description: "소속 협력사명 검색"
+          schema:
+            type: "string"
+        - name: "phoneNumber"
+          in: "query"
+          description: "전화번호 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "joinDateStart"
+          in: "query"
+          description: "입사일 조회 시작 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
+        - name: "joinDateEnd"
+          in: "query"
+          description: "입사일 조회 종료 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
+        - name: "resignationDateStart"
+          in: "query"
+          description: "퇴사일 조회 시작 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
+        - name: "resignationDateEnd"
+          in: "query"
+          description: "퇴사일 조회 종료 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
+        - name: "gender"
+          in: "query"
+          description: "성별 필터"
+          schema:
+            type: "string"
+            enum: ["M", "F", "OTHER"]
+        - name: "nationality"
+          in: "query"
+          description: "국적 필터 (ISO 3166-1 alpha-2)"
+          schema:
+            type: "string"
         - name: "isActive"
           in: "query"
           schema:
@@ -797,6 +1001,18 @@ paths:
           schema:
             type: "string"
             format: "uuid"
+        - name: "startDate"
+          in: "query"
+          description: "조회 시작일 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
+        - name: "endDate"
+          in: "query"
+          description: "조회 종료일 (YYYY-MM-DD)"
+          schema:
+            type: "string"
+            format: "date"
         - name: "page"
           in: "query"
           schema:
@@ -807,6 +1023,13 @@ paths:
           schema:
             type: "integer"
             default: 1000
+        - name: "sort"
+          in: "query"
+          description: "정렬 기준 (예: createdAt,desc)"
+          schema:
+            type: "array"
+            items:
+              type: "string"
       responses:
         '200':
           description: "성공"
@@ -829,16 +1052,22 @@ components:
       properties:
         size:
           type: "integer"
+          example: 20
         page:
           type: "integer"
+          example: 0
         totalElements:
           type: "integer"
+          example: 125
         totalPages:
           type: "integer"
+          example: 7
         isLast:
           type: "boolean"
+          example: false
         hasNext:
           type: "boolean"
+          example: true
 
     DeleteResult:
       type: "object"
@@ -846,18 +1075,23 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "550e8400-e29b-41d4-a716-446655440000"
         isSoftDeleted:
           type: "boolean"
+          example: true
         isHardDeleted:
           type: "boolean"
+          example: false
 
     # --- HR Schemas ---
-    Organization:
+    OrganizationSummary:
       type: "object"
+      description: "조직 목록 조회용 요약 정보 (민감정보 마스킹)"
       properties:
         id:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         name:
           type: "string"
           example: "삼성전자"
@@ -866,17 +1100,66 @@ components:
           example: "SAMSUNG"
         businessRegistrationNumber:
           type: "string"
-          description: "사업자등록번호 (복호화됨)"
+          description: "사업자등록번호 (마스킹됨: 123-45-*****)"
+          example: "123-45-*****"
         description:
           type: "string"
+          example: "본사 조직"
+        timezone:
+          type: "string"
+          example: "Asia/Seoul"
         isActive:
           type: "boolean"
+          example: true
+
+    Organization:
+      type: "object"
+      description: "조직 상세 정보 (관리자용, 원본 데이터 포함)"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
+        name:
+          type: "string"
+          example: "삼성전자"
+        code:
+          type: "string"
+          example: "SAMSUNG"
+        businessRegistrationNumber:
+          type: "string"
+          description: "사업자등록번호 (복호화된 원본)"
+          example: "123-45-67890"
+        description:
+          type: "string"
+          example: "본사 및 주요 사업장 포함"
+        timezone:
+          type: "string"
+          example: "Asia/Seoul"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 조직 식별키 (예: SAP_ORG_ID)"
+          example: "ORG_001_SAP"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          description: "마지막 동기화 일시"
+          example: "2023-10-25T14:00:00Z"
+        isSynced:
+          type: "boolean"
+          description: "외부 시스템과 연동된 데이터인지 여부"
+          example: true
+        isActive:
+          type: "boolean"
+          example: true
         createdAt:
           type: "string"
           format: "date-time"
+          example: "2023-01-01T09:00:00Z"
         updatedAt:
           type: "string"
           format: "date-time"
+          example: "2023-10-01T10:30:00Z"
 
     OrganizationRequest:
       type: "object"
@@ -884,15 +1167,23 @@ components:
       properties:
         name:
           type: "string"
+          example: "테크 스타트업"
         code:
           type: "string"
+          example: "TECH_STARTUP"
         businessRegistrationNumber:
           type: "string"
+          example: "111-22-33333"
         description:
           type: "string"
-        isActive:
-          type: "boolean"
-          default: true
+          example: "신규 설립 법인"
+        timezone:
+          type: "string"
+          example: "Asia/Seoul"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 조직 식별키 (예: SAP_ORG_ID)"
+          example: "EXT_ORG_999"
 
     Department:
       type: "object"
@@ -900,35 +1191,54 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "a1b2c3d4-e5f6-7890-1234-56789abcdef0"
         organizationId:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         parentDepartmentId:
           type: "string"
           format: "uuid"
           description: "상위 부서 ID"
           nullable: true
+          example: "b2c3d4e5-f6a7-8901-2345-67890abcdef1"
         parentDepartmentName:
           type: "string"
           description: "[Read-Only] 상위 부서명"
           readOnly: true
           nullable: true
+          example: "플랫폼 본부"
         name:
           type: "string"
-          example: "개발팀"
+          example: "백엔드 개발팀"
         code:
           type: "string"
-          example: "DEPT-DEV-01"
+          example: "DEPT-DEV-BE"
         description:
           type: "string"
+          example: "서버 및 API 개발 담당"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 부서 식별키"
+          example: "SAP_DEPT_1001"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          example: "2023-10-26T09:00:00Z"
+        isSynced:
+          type: "boolean"
+          example: true
         isActive:
           type: "boolean"
+          example: true
         createdAt:
           type: "string"
           format: "date-time"
+          example: "2023-02-01T09:00:00Z"
         updatedAt:
           type: "string"
           format: "date-time"
+          example: "2023-09-15T14:20:00Z"
 
     DepartmentRequest:
       type: "object"
@@ -938,15 +1248,20 @@ components:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "b2c3d4e5-f6a7-8901-2345-67890abcdef1"
         name:
           type: "string"
+          example: "모바일 개발팀"
         code:
           type: "string"
+          example: "DEPT-DEV-MO"
         description:
           type: "string"
-        isActive:
-          type: "boolean"
-          default: true
+          example: "iOS/Android 앱 개발"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 부서 식별키"
+          example: "SAP_DEPT_1002"
 
     Job:
       type: "object"
@@ -954,18 +1269,34 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "c3d4e5f6-a7b8-9012-3456-7890abcdef12"
         organizationId:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         name:
           type: "string"
           example: "소프트웨어 개발"
         code:
           type: "string"
+          example: "JOB_SW_DEV"
         description:
           type: "string"
+          example: "SW 설계 및 구현"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직무 식별키"
+          example: "JOB_001"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          example: "2023-10-20T10:00:00Z"
+        isSynced:
+          type: "boolean"
+          example: true
         isActive:
           type: "boolean"
+          example: true
 
     JobRequest:
       type: "object"
@@ -973,13 +1304,17 @@ components:
       properties:
         name:
           type: "string"
+          example: "기획"
         code:
           type: "string"
+          example: "JOB_PLANNING"
         description:
           type: "string"
-        isActive:
-          type: "boolean"
-          default: true
+          example: "서비스 기획 및 PM"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직무 식별키"
+          example: "JOB_002"
 
     Position:
       type: "object"
@@ -987,18 +1322,34 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef123"
         organizationId:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         name:
           type: "string"
           example: "팀장"
         code:
           type: "string"
+          example: "POS_TEAM_LEADER"
         description:
           type: "string"
+          example: "조직 관리 및 리더십"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직책 식별키"
+          example: "POS_TL"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          example: "2023-10-20T10:00:00Z"
+        isSynced:
+          type: "boolean"
+          example: true
         isActive:
           type: "boolean"
+          example: true
 
     PositionRequest:
       type: "object"
@@ -1006,13 +1357,17 @@ components:
       properties:
         name:
           type: "string"
+          example: "본부장"
         code:
           type: "string"
+          example: "POS_HEAD"
         description:
           type: "string"
-        isActive:
-          type: "boolean"
-          default: true
+          example: "본부 총괄"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직책 식별키"
+          example: "POS_HD"
 
     Grade:
       type: "object"
@@ -1020,22 +1375,38 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "e5f6a7b8-c9d0-1234-5678-90abcdef1234"
         organizationId:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         name:
           type: "string"
           example: "책임"
         code:
           type: "string"
+          example: "GR_SENIOR"
         step:
           type: "integer"
           description: "직급 서열 (높을수록 상위 직급)"
           example: 3
         description:
           type: "string"
+          example: "중간 관리자급"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직급 식별키"
+          example: "GR_03"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          example: "2023-10-20T10:00:00Z"
+        isSynced:
+          type: "boolean"
+          example: true
         isActive:
           type: "boolean"
+          example: true
 
     GradeRequest:
       type: "object"
@@ -1043,52 +1414,122 @@ components:
       properties:
         name:
           type: "string"
+          example: "수석"
         code:
           type: "string"
+          example: "GR_PRINCIPAL"
         step:
           type: "integer"
           default: 0
+          example: 4
         description:
           type: "string"
-        isActive:
-          type: "boolean"
-          default: true
+          example: "최상위 실무자"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직급 식별키"
+          example: "GR_04"
 
     # --- Employee & Assignment ---
     EmployeeAssignment:
       type: "object"
       description: "직원의 현재 발령(소속) 상태"
       properties:
+        # ID 참조
         departmentId:
           type: "string"
           format: "uuid"
-        departmentName:
-          type: "string"
-          readOnly: true
+          example: "a1b2c3d4-e5f6-7890-1234-56789abcdef0"
         jobId:
           type: "string"
           format: "uuid"
           nullable: true
-        jobName:
-          type: "string"
-          readOnly: true
-          nullable: true
+          example: "c3d4e5f6-a7b8-9012-3456-7890abcdef12"
         positionId:
           type: "string"
           format: "uuid"
           nullable: true
-        positionName:
-          type: "string"
-          readOnly: true
-          nullable: true
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef123"
         gradeId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "e5f6a7b8-c9d0-1234-5678-90abcdef1234"
+        
+        # 상세 데이터
+        employeeName:
+          type: "string"
+          example: "홍길동"
+        employeeCode:
+          type: "string"
+          example: "20230001"
+        appointmentType:
+          type: "string"
+          description: "발령 구분 (HIRE, PROMOTION, TRANSFER, DISPATCH...)"
+          example: "TRANSFER"
+        appointmentDate:
+          type: "string"
+          format: "date"
+          description: "발령 일자"
+          example: "2023-10-01"
+        assignmentEndDate:
+          type: "string"
+          format: "date"
+          description: "발령 종료 예정일"
+          example: "2024-12-31"
+        reason:
+          type: "string"
+          description: "발령 사유"
+          example: "조직 개편에 따른 전배"
+        
+        # 스냅샷 데이터
+        organizationCode:
+          type: "string"
+          example: "SAMSUNG"
+        organizationName:
+          type: "string"
+          example: "삼성전자"
+        departmentCode:
+          type: "string"
+          example: "DEPT-DEV-BE"
+        departmentName:
+          type: "string"
+          example: "백엔드 개발팀"
+        jobCode:
+          type: "string"
+          example: "JOB_SW_DEV"
+        jobName:
+          type: "string"
+          example: "소프트웨어 개발"
+        positionCode:
+          type: "string"
+          example: "POS_TEAM_LEADER"
+        positionName:
+          type: "string"
+          example: "팀장"
+        gradeCode:
+          type: "string"
+          example: "GR_SENIOR"
         gradeName:
           type: "string"
-          readOnly: true
-          nullable: true
+          example: "책임"
+        
+        isPrimary:
+          type: "boolean"
+          description: "주 직무 여부"
+          example: true
+        note:
+          type: "string"
+          description: "비고"
+          example: "특채 입사"
+        prevDepartmentName:
+          type: "string"
+          description: "이전 부서명"
+          example: "모바일 개발팀"
+        prevPositionName:
+          type: "string"
+          description: "이전 직책명"
+          example: "파트장"
 
     Employee:
       type: "object"
@@ -1096,93 +1537,297 @@ components:
         id:
           type: "string"
           format: "uuid"
+          example: "12345678-1234-1234-1234-1234567890ab"
         organizationId:
           type: "string"
           format: "uuid"
+          example: "f47ac10b-58cc-4372-a567-0e02b2c3d479"
         userId:
           type: "string"
           format: "uuid"
           description: "시스템 로그인 계정 ID (연동된 경우)"
           nullable: true
+          example: "user-uuid-1234"
         
-        # 개인정보 (복호화된 평문)
-        name:
-          type: "string"
-          example: "홍길동"
-        employeeNumber:
+        # 필수 신상 정보
+        employeeCode:
           type: "string"
           description: "사번"
           example: "20230001"
+        employmentType:
+          type: "string"
+          description: "고용 형태 (REGULAR, CONTRACT, DISPATCHED, PARTNER...)"
+          enum: ["REGULAR", "CONTRACT", "DISPATCHED", "PARTNER", "INTERN", "FREELANCER"]
+          example: "REGULAR"
+        name:
+          type: "string"
+          example: "홍길동"
+        privacyAgreementAt:
+          type: "string"
+          format: "date-time"
+          description: "개인정보 수집 동의 일시"
+          example: "2023-01-01T09:00:00Z"
+        privacyPolicyVersion:
+          type: "string"
+          description: "개인정보 처리방침 버전"
+          example: "v1.0"
+
+        # 선택 신상 정보
+        partnerCompanyName:
+          type: "string"
+          description: "소속 협력사명"
+          example: "파트너사(주)"
+        englishName:
+          type: "string"
+          example: "Hong Gil-dong"
+        profileImageUrl:
+          type: "string"
+          example: "https://s3.ap-northeast-2.amazonaws.com/profile/20230001.jpg"
         email:
           type: "string"
           format: "email"
+          description: "사내 이메일"
+          example: "hong@company.com"
+        personalEmail:
+          type: "string"
+          format: "email"
+          description: "개인 이메일 (마스킹됨: hon***@gmail.com)"
+          example: "hon***@gmail.com"
         phoneNumber:
           type: "string"
+          description: "전화번호 (마스킹됨: 010-1234-****)"
+          example: "010-1234-****"
+        residentRegistrationNumber:
+          type: "string"
+          description: "주민등록번호 (마스킹됨: 900101-1******)"
+          example: "900101-1******"
+        socialSecurityNumber:
+          type: "string"
+          description: "해외 식별 번호 (SSN) (마스킹됨)"
+          example: "***-**-****"
+        passportNumber:
+          type: "string"
+          description: "여권 번호 (마스킹됨)"
+          example: "M123****"
+        joinDate:
+          type: "string"
+          format: "date"
+          example: "2023-01-01"
+        resignationDate:
+          type: "string"
+          format: "date"
+          example: "2024-12-31"
+        contractStartDate:
+          type: "string"
+          format: "date"
+          example: "2023-01-01"
+        contractEndDate:
+          type: "string"
+          format: "date"
+          example: "2023-12-31"
+        signatureImageUrl:
+          type: "string"
+          example: "https://s3.../sign.png"
         birthDate:
           type: "string"
           format: "date"
+          example: "1990-01-01"
+        gender:
+          type: "string"
+          enum: ["M", "F", "OTHER"]
+          example: "M"
+        nationality:
+          type: "string"
+          description: "ISO 3166-1 alpha-2"
+          example: "KR"
+        militaryStatus:
+          type: "string"
+          example: "군필"
+        zipCode:
+          type: "string"
+          example: "13529"
         address:
           type: "string"
+          example: "경기도 성남시 분당구 판교역로"
+        detailAddress:
+          type: "string"
+          example: "A동 101호"
+        emergencyContact:
+          type: "string"
+          example: "010-9876-5432"
+        carNumber:
+          type: "string"
+          example: "12가3456"
+        bankAccount:
+          type: "object"
+          description: "급여 계좌 정보 (계좌번호 마스킹)"
+          example: {"bank": "Shinhan", "accountNumber": "110-***-******"}
 
         # 현재 소속 정보 (Flat하게 제공하거나 객체로 제공 가능, 여기서는 객체로 포함)
         currentAssignment:
           $ref: "#/components/schemas/EmployeeAssignment"
 
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직원 식별키"
+          example: "EMP_SAP_20230001"
+        lastSyncAt:
+          type: "string"
+          format: "date-time"
+          example: "2023-10-26T15:00:00Z"
+        isSynced:
+          type: "boolean"
+          example: true
         isActive:
           type: "boolean"
+          example: true
         createdAt:
           type: "string"
           format: "date-time"
+          example: "2023-01-01T09:00:00Z"
         updatedAt:
           type: "string"
           format: "date-time"
+          example: "2023-10-01T10:00:00Z"
 
     EmployeeRequest:
       type: "object"
-      required: ["name", "employeeNumber", "departmentId"]
+      required: ["employeeCode", "employmentType", "name", "departmentId", "privacyAgreementAt", "privacyPolicyVersion"]
       description: "직원 생성 요청 (기본 프로필 + 초기 발령 정보)"
       properties:
         # 기본 프로필
+        employeeCode:
+          type: "string"
+          example: "20230002"
+        employmentType:
+          type: "string"
+          enum: ["REGULAR", "CONTRACT", "DISPATCHED", "PARTNER", "INTERN", "FREELANCER"]
+          example: "REGULAR"
         name:
           type: "string"
-        employeeNumber:
+          example: "김철수"
+        privacyAgreementAt:
           type: "string"
+          format: "date-time"
+          example: "2023-11-01T09:00:00Z"
+        privacyPolicyVersion:
+          type: "string"
+          example: "v1.0"
+        
+        # 선택 프로필
+        partnerCompanyName:
+          type: "string"
+        englishName:
+          type: "string"
+          example: "Kim Cheol-su"
         email:
           type: "string"
           format: "email"
+          example: "cheolsu@company.com"
+        personalEmail:
+          type: "string"
+          format: "email"
+          example: "cheolsu.p@gmail.com"
         phoneNumber:
           type: "string"
+          example: "010-5678-1234"
+        residentRegistrationNumber:
+          type: "string"
+          example: "920101-1111111"
+        socialSecurityNumber:
+          type: "string"
+          example: "900-12-3456"
+        passportNumber:
+          type: "string"
+          example: "N1234567"
+        joinDate:
+          type: "string"
+          format: "date"
+          example: "2023-11-01"
+        contractStartDate:
+          type: "string"
+          format: "date"
+        contractEndDate:
+          type: "string"
+          format: "date"
         birthDate:
           type: "string"
           format: "date"
+          example: "1992-01-01"
+        gender:
+          type: "string"
+          enum: ["M", "F", "OTHER"]
+          example: "M"
+        nationality:
+          type: "string"
+          example: "KR"
+        militaryStatus:
+          type: "string"
+          example: "군필"
+        zipCode:
+          type: "string"
+          example: "06234"
         address:
           type: "string"
+          example: "서울시 강남구 테헤란로"
+        detailAddress:
+          type: "string"
+          example: "B동 202호"
+        emergencyContact:
+          type: "string"
+          example: "010-1111-2222"
+        carNumber:
+          type: "string"
+          example: "34나5678"
+        bankAccount:
+          type: "object"
+          example: {"bank": "KakaoBank", "accountNumber": "3333-12-345678"}
+        
         userId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "user-uuid-5678"
+        externalSystemId:
+          type: "string"
+          description: "외부 시스템 직원 식별키"
+          example: "EMP_SAP_20230002"
         
         # 초기 발령 정보 (필수)
         departmentId:
           type: "string"
           format: "uuid"
           description: "초기 배정 부서 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-56789abcdef0"
         jobId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "c3d4e5f6-a7b8-9012-3456-7890abcdef12"
         positionId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef123"
         gradeId:
           type: "string"
           format: "uuid"
           nullable: true
-
-        isActive:
-          type: "boolean"
-          default: true
+          example: "e5f6a7b8-c9d0-1234-5678-90abcdef1234"
+        
+        # 초기 발령 상세
+        appointmentType:
+          type: "string"
+          default: "HIRE"
+          example: "HIRE"
+        appointmentDate:
+          type: "string"
+          format: "date"
+          example: "2023-11-01"
+        reason:
+          type: "string"
+          description: "입사/발령 사유"
+          example: "신규 입사"
 
     EmployeeUpdateRequest:
       type: "object"
@@ -1190,50 +1835,115 @@ components:
       properties:
         name:
           type: "string"
+          example: "김철수"
+        englishName:
+          type: "string"
+          example: "Kim Cheol-su"
         email:
           type: "string"
           format: "email"
+          example: "cheolsu.new@company.com"
+        personalEmail:
+          type: "string"
+          format: "email"
+          example: "cheolsu.p@gmail.com"
         phoneNumber:
           type: "string"
+          example: "010-9999-8888"
         birthDate:
           type: "string"
           format: "date"
+          example: "1992-01-01"
+        gender:
+          type: "string"
+          enum: ["M", "F", "OTHER"]
+          example: "M"
+        nationality:
+          type: "string"
+          example: "KR"
+        zipCode:
+          type: "string"
+          example: "06234"
         address:
           type: "string"
+          example: "서울시 강남구 테헤란로"
+        detailAddress:
+          type: "string"
+          example: "B동 202호"
+        emergencyContact:
+          type: "string"
+          example: "010-1111-2222"
+        carNumber:
+          type: "string"
+          example: "34나5678"
+        bankAccount:
+          type: "object"
+          example: {"bank": "KakaoBank", "accountNumber": "3333-**-*******"}
+        
         userId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "user-uuid-5678"
         isActive:
           type: "boolean"
+          example: true
           
     # --- Assignment Management Schemas ---
     AssignmentRequest:
       type: "object"
-      required: ["employeeId", "departmentId"]
+      required: ["employeeId", "departmentId", "appointmentType", "appointmentDate", "reason"]
       description: "발령 요청 객체"
       properties:
         employeeId:
           type: "string"
           format: "uuid"
+          example: "12345678-1234-1234-1234-1234567890ab"
         departmentId:
           type: "string"
           format: "uuid"
+          example: "b2c3d4e5-f6a7-8901-2345-67890abcdef1"
         jobId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "c3d4e5f6-a7b8-9012-3456-7890abcdef12"
         positionId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "d4e5f6a7-b8c9-0123-4567-890abcdef123"
         gradeId:
           type: "string"
           format: "uuid"
           nullable: true
+          example: "e5f6a7b8-c9d0-1234-5678-90abcdef1234"
+        
+        appointmentType:
+          type: "string"
+          description: "발령 구분"
+          example: "PROMOTION"
+        appointmentDate:
+          type: "string"
+          format: "date"
+          description: "발령 일자"
+          example: "2024-01-01"
+        assignmentEndDate:
+          type: "string"
+          format: "date"
+          example: "2025-12-31"
+        reason:
+          type: "string"
+          description: "발령 사유 상세"
+          example: "정기 승진"
         note:
           type: "string"
-          description: "발령 사유 및 메모"
+          description: "비고"
+          example: "우수 사원 특진"
+        isPrimary:
+          type: "boolean"
+          default: true
+          example: true
     
     AssignmentHistory:
       type: "object"
@@ -1241,28 +1951,75 @@ components:
         id:
           type: "string"
           format: "uuid"
-        employeeId:
+          example: "hist-uuid-1111"
+        employeeName:
           type: "string"
-          format: "uuid"
-        departmentName:
+          example: "홍길동"
+        employeeCode:
           type: "string"
-          description: "당시 부서명 (스냅샷)"
-        jobName:
+          example: "20230001"
+        appointmentType:
           type: "string"
-          description: "당시 직무명 (스냅샷)"
-          nullable: true
-        positionName:
+          example: "TRANSFER"
+        appointmentNumber:
           type: "string"
-          description: "당시 직책명 (스냅샷)"
-          nullable: true
-        gradeName:
+          example: "HR-2023-005"
+        appointmentDate:
           type: "string"
-          description: "당시 직급명 (스냅샷)"
-          nullable: true
-        note:
+          format: "date"
+          example: "2023-10-01"
+        assignmentStartDate:
           type: "string"
-          description: "발령 사유 (복호화됨)"
+          format: "date"
+          example: "2023-10-01"
+        assignmentEndDate:
+          type: "string"
+          format: "date"
+          example: "2023-12-31"
+        
+        snapshotOrganizationCode:
+          type: "string"
+          example: "SAMSUNG"
+        snapshotOrganizationName:
+          type: "string"
+          example: "삼성전자"
+        snapshotDepartmentCode:
+          type: "string"
+          example: "DEPT-DEV-BE"
+        snapshotDepartmentName:
+          type: "string"
+          example: "백엔드 개발팀"
+        snapshotJobCode:
+          type: "string"
+          example: "JOB_SW_DEV"
+        snapshotJobName:
+          type: "string"
+          example: "소프트웨어 개발"
+        snapshotPositionCode:
+          type: "string"
+          example: "POS_MEMBER"
+        snapshotPositionName:
+          type: "string"
+          example: "팀원"
+        snapshotGradeCode:
+          type: "string"
+          example: "GR_JUNIOR"
+        snapshotGradeName:
+          type: "string"
+          example: "선임"
+        
+        reason:
+          type: "string"
+          example: "부서 이동"
+        approvers:
+          type: "array"
+          items:
+            type: "object"
+            description: "승인자 목록 스냅샷"
+            example: {"name":"이승인", "employeeCode":"2010001", "positionName":"팀장", "approvedAt":"2023-09-28"}
+        
         createdAt:
           type: "string"
           format: "date-time"
-          description: "발령 일시"
+          description: "이력 생성 일시"
+          example: "2023-10-01T09:00:00Z"
