@@ -3,229 +3,47 @@ info:
   title: Space Service API
   description: |
     공간 관리 서비스 API 명세서입니다.<br>
-    사이트, 시설물, 구획, 구역, 출입 지점(Access Point) 등 물리적 공간과 관련된 리소스를 관리합니다.
+    사이트, 시설물, 구획, 구역, 출입 지점(Access Point) 및 관제 맵(Map) 등 물리적 공간 리소스를 관리합니다.
   version: 1.0.0
   contact:
     name: "Jehyun Kim"
 
 servers:
   - url: http://localhost:4300/api/v1/space
-    description: "로컬 개발 서버"     
+    description: "로컬 개발 서버"
 
 tags:
+  - name: 1. Site Management
+    description: 사이트(최상위 거점) 관리
+  - name: 2. Facility Management
+    description: 시설물(건물) 관리
+  - name: 3. Sector Management
+    description: 구획(층, 섹션) 관리
+  - name: 4. Area Management
+    description: 구역(실, Zone) 관리
   - name: 5. Access Point Management
     description: 출입 지점(문/게이트) 관리
-
-paths:
-  # ==========================================
-  # 5. Access Point Management
-  # ==========================================
-  /access-points:
-    get:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트(Access Point) 목록 조회"
-      description: |
-        물리적 출입 포인트 목록을 조회합니다.<br>
-        상위 공간(`site`, `facility`, `sector`) 및 구역(`area`)별 조회나 타입(`type`)별 필터링을 지원합니다.<br>
-        **Note:** `tenantId`는 인증 토큰(JWT)에서 자동으로 추출하여 필터링합니다.
-      parameters:
-        - name: "siteId"
-          in: "query"
-          description: "소속 사이트 ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "facilityId"
-          in: "query"
-          description: "소속 시설물(건물) ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "sectorId"
-          in: "query"
-          description: "소속 구획(층) ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "areaId"
-          in: "query"
-          description: "소속 구역 ID 필터"
-          schema:
-            type: "string"
-            format: "uuid"
-        - name: "name"
-          in: "query"
-          description: "출입 포인트명 검색 (부분 일치)"
-          schema:
-            type: "string"
-        - name: "type"
-          in: "query"
-          description: "출입 포인트 타입 필터"
-          schema:
-            type: "string"
-            enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
-        - name: "isActive"
-          in: "query"
-          schema:
-            type: "boolean"
-        - name: "page"
-          in: "query"
-          schema:
-            type: "integer"
-            default: 0
-        - name: "size"
-          in: "query"
-          schema:
-            type: "integer"
-            default: 1000
-        - name: "sort"
-          in: "query"
-          description: |
-            정렬 기준 (형식: 필드명,정렬방향)<br>
-            예: name,asc (이름순), createdAt,desc (최신순)<br>
-            다중 정렬 가능
-          schema:
-            type: "array"
-            items:
-              type: "string"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                type: "object"
-                properties:
-                  content:
-                    type: "array"
-                    items:
-                      $ref: "#/components/schemas/AccessPoint"
-                  page:
-                    $ref: "#/components/schemas/PageMetadata"  
-    post:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트 생성"
-      description: |
-        새로운 물리적 출입 포인트을 생성합니다.
-        
-        **주요 특징:**
-        - **공간 정보:** `siteId`, `facilityId`, `sectorId`, `areaId` 중 하나 이상을 입력하여 위치를 지정할 수 있습니다. (모두 선택 사항)
-        - **보안 설정:** 입실/퇴실에 대한 인증 규칙(`AuthenticationRule`)과 최소 보안 임계값(`SecurityThreshold`)을 직접 설정합니다.
-        - **장비 연결:** `devices` 배열을 통해 입/출 리더기나 컨트롤러 등 물리적 장비를 즉시 연결할 수 있습니다.
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessPointRequest"
-      responses:
-        '200':
-          description: "생성됨"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '409':
-          $ref: "#/components/responses/Conflict"
-
-  /access-points/types:
-    get:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트 타입 목록 조회"
-      description: |
-        시스템에서 지원하는 출입 포인트 타입(Enum) 목록을 조회합니다.<br>
-        출입 포인트 타입(Enum) 목록:<br>
-        `"DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"`<br>
-        UI 드롭다운(Select Box) 구성에 사용됩니다.<br>
-        반환 예시: <br>
-        `[{ "code": "DOOR", "label": "일반 출입문" }, { "code": "TURNSTILE", "label": "스피드 게이트" }]`
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                type: "array"
-                items:
-                  $ref: "#/components/schemas/AccessPointType"  
-
-  /access-points/{id}:
-    get:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트 단건 조회"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      responses:
-        '200':
-          description: "성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '404':
-          $ref: "#/components/responses/NotFound"
-
-    put:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트 수정"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      requestBody:
-        content:
-          application/json:
-            schema:
-              $ref: "#/components/schemas/AccessPointRequest"
-      responses:
-        '200':
-          description: "수정됨"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/AccessPoint"
-        '404':
-          $ref: "#/components/responses/NotFound"
-        '409':
-          $ref: "#/components/responses/Conflict"
-
-    delete:
-      tags: ["5. Access Point Management"]
-      summary: "출입 포인트 삭제"
-      parameters:
-        - name: "id"
-          in: "path"
-          required: true
-          schema:
-            type: "string"
-            format: "uuid"
-      responses:
-        '200':
-          description: "삭제 성공"
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/DeleteResult"
-        '404':
-          $ref: "#/components/responses/NotFound"
+  - name: 6. Map View Management
+    description: 도면 및 3D 모델 뷰 관리
+  - name: 7. Map Item Management
+    description: 맵 아이템 및 배치 관리
 
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+
   responses:
     BadRequest:
-      description: "잘못된 요청 (유효성 검사 실패 등)"
+      description: "잘못된 요청"
       content:
         application/json:
           schema:
             $ref: "#/components/schemas/ErrorResponse"
     Unauthorized:
-      description: "인증 실패 (토큰 없음/만료)"
+      description: "인증 실패"
       content:
         application/json:
           schema:
@@ -256,9 +74,6 @@ components:
             $ref: "#/components/schemas/ErrorResponse"
 
   schemas:
-    # ----------------------------------------------------
-    # Common Schemas
-    # ----------------------------------------------------
     PageMetadata:
       type: "object"
       properties:
@@ -294,19 +109,44 @@ components:
           type: "string"
           format: "uuid"
           description: "삭제된 리소스의 ID"
+          example: "550e8400-e29b-41d4-a716-446655440000"
         isSoftDeleted:
           type: "boolean"
-          description: "논리적 삭제(Soft Delete) 여부. true면 DB에는 남아있지만 삭제된 것으로 처리됨."
+          description: "논리적 삭제(Soft Delete) 여부"
+          example: true
         isHardDeleted:
           type: "boolean"
-          description: "물리적 삭제(Hard Delete) 여부. true면 DB에서 완전히 제거됨."
+          description: "물리적 삭제(Hard Delete) 여부"
+          example: false
+        message:
+          type: "string"
+          description: "삭제 결과 메시지"
+          example: "성공적으로 보관(Soft Delete)되었습니다."
+
+    # 파일 업로드 응답
+    FileUploadResponse:
+      type: "object"
+      properties:
+        url:
+          type: "string"
+          format: "uri"
+          description: "업로드된 파일의 접근 URL"
+          example: "https://cdn.example.com/maps/floor1-uuid.png"
+        fileName:
+          type: "string"
+          description: "저장된 파일명"
+          example: "floor1-uuid.png"
+        size:
+          type: "integer"
+          description: "파일 크기 (Byte)"
+          example: 102400
 
     ErrorResponse:
       type: "object"
       properties:
         errorCode:
           type: "string"
-          description: "에러 코드 (예: DUPLICATE_ENTRY, RESOURCE_NOT_FOUND)"
+          description: "에러 코드"
           example: "INVALID_REQUEST"
         errorMessage:
           type: "string"
@@ -314,315 +154,760 @@ components:
           example: "잘못된 요청입니다."
         errorDetails:
           type: "object"
-          description: "상세 에러 내용 (필드별 유효성 검사 실패 사유 등)"
           nullable: true
+          description: "상세 에러 내용"
+          example: { "field": "name", "reason": "required" }
 
-    AccessPointDevice:
+    # --- JSONB Schemas (Added to fix reference error) ---
+    FacilityBoundary:
       type: "object"
-      description: "출입 지점에 연결된 장비 상세 정보"
+      required: ["type", "coordinates"]
+      description: "시설물 외곽선 좌표 (GeoJSON Format)"
       properties:
-        deviceId:
+        type:
+          type: "string"
+          description: "좌표 타입"
+          example: "Polygon"
+        coordinates:
+          type: "array"
+          description: "GeoJSON 표준 포맷 (Lng, Lat)"
+          items:
+            type: "array"
+            items:
+              type: "array"
+              items:
+                type: "number"
+          example: [[[127.1, 37.4], [127.2, 37.4], [127.2, 37.5], [127.1, 37.5], [127.1, 37.4]]]
+        properties:
+          type: "object"
+          nullable: true
+          description: "메타데이터 (색상 등)"
+          example: {"fill": "#FF0000"}
+
+    AreaCoordinates:
+      type: "object"
+      required: ["type", "points"]
+      description: "구역 좌표 설정"
+      properties:
+        type:
+          type: "string"
+          description: "좌표 타입 (IndoorPolygon: 실내, Polygon: 실외)"
+          enum: ["IndoorPolygon", "Polygon"]
+          example: "IndoorPolygon"
+        width:
+          type: "number"
+          nullable: true
+          description: "실내 도면 기준 가로 (px/m)"
+          example: 1920
+        height:
+          type: "number"
+          nullable: true
+          description: "실내 도면 기준 세로 (px/m)"
+          example: 1080
+        points:
+          type: "array"
+          description: "좌표 객체 배열"
+          items:
+            type: "object"
+            properties:
+              x:
+                type: "number"
+              y:
+                type: "number"
+          example: [{ "x": 100, "y": 200 }, { "x": 300, "y": 200 }, { "x": 300, "y": 400 }, { "x": 100, "y": 400 }]
+
+    AccessPointHardwareConfig:
+      type: "object"
+      required: ["useExitButton", "autoOpenOnFire", "forcedOpenAlarm", "heldOpenAlarm"]
+      description: "출입문 하드웨어 및 보안 설정"
+      properties:
+        openDurationSec:
+          type: "integer"
+          description: "개방 유지 시간 (초)"
+          nullable: true
+          example: 3
+        openAlarmDelaySec:
+          type: "integer"
+          description: "개방 초과 경보 지연 (초)"
+          nullable: true
+          example: 30
+        alarmDurationSec:
+          type: "integer"
+          description: "강제 개방 알람 울림 시간 (초)"
+          nullable: true
+          example: 60
+        useExitButton:
+          type: "boolean"
+          description: "퇴실 버튼 사용 여부"
+          example: true
+        autoOpenOnFire:
+          type: "boolean"
+          description: "화재 시 자동 개방 여부"
+          example: true
+        forcedOpenAlarm:
+          type: "boolean"
+          description: "강제 개방 경보 사용 여부"
+          example: true
+        heldOpenAlarm:
+          type: "boolean"
+          description: "개방 초과 경보 사용 여부"
+          example: true
+        toggleMode:
+          type: "boolean"
+          description: "인증 시 잠금/해제 토글 모드 사용"
+          nullable: true
+          example: false
+        escortConfig:
+          type: "object"
+          nullable: true
+          description: "에스코트(동행) 모드 설정"
+          properties:
+            enabled:
+              type: "boolean"
+              example: true
+            timeout:
+              type: "integer"
+              description: "동행자 인증 대기 시간(초)"
+              example: 10
+        antipassback:
+          type: "object"
+          nullable: true
+          description: "안티패스백(APB) 예외 설정 (null이면 미사용)"
+          properties:
+            mode:
+              type: "string"
+              description: "위반 시 처리 방식 (HARD: 거부, SOFT: 허용 및 로그)"
+              enum: ["HARD", "SOFT"]
+              example: "SOFT"
+            resetTime:
+              type: "integer"
+              description: "자동 초기화 시간 (분 단위, 0=자정)"
+              example: 240
+
+    MapViewConfig:
+      type: "object"
+      required: ["initialZoom", "centerX", "centerY"]
+      description: "맵 뷰포트 설정"
+      properties:
+        initialZoom:
+          type: "number"
+          description: "초기 확대 배율"
+          example: 1.0
+        minZoom:
+          type: "number"
+          nullable: true
+          description: "최소 줌"
+          example: 0.5
+        maxZoom:
+          type: "number"
+          nullable: true
+          description: "최대 줌"
+          example: 3.0
+        centerX:
+          type: "number"
+          description: "초기 중심 X"
+          example: 500
+        centerY:
+          type: "number"
+          description: "초기 중심 Y"
+          example: 400
+        rotation:
+          type: "number"
+          nullable: true
+          description: "초기 회전 각도 (도)"
+          example: 0
+        backgroundColor:
+          type: "string"
+          nullable: true
+          description: "배경색 (Hex)"
+          example: "#F0F0F0"
+        gridVisible:
+          type: "boolean"
+          nullable: true
+          description: "그리드 표시 여부"
+          example: false
+
+    MapItemIconStyle:
+      type: "object"
+      required: ["defaultColor", "size"]
+      description: "아이콘 스타일 설정"
+      properties:
+        iconUrl:
+          type: "string"
+          format: "uri"
+          nullable: true
+          description: "커스텀 아이콘 URL"
+          example: "/icons/cctv.png"
+        defaultColor:
+          type: "string"
+          description: "기본 색상"
+          example: "#333333"
+        activeColor:
+          type: "string"
+          nullable: true
+          description: "활성 상태 색상"
+          example: "#00FF00"
+        errorColor:
+          type: "string"
+          nullable: true
+          description: "에러 상태 색상"
+          example: "#FF0000"
+        size:
+          type: "number"
+          description: "아이콘 크기 (px)"
+          example: 24
+        anchorPoint:
+          type: "string"
+          nullable: true
+          description: "아이콘 기준점 (CENTER, BOTTOM)"
+          enum: ["CENTER", "BOTTOM"]
+          example: "CENTER"
+
+    MapViewItemOverrideStyle:
+      type: "object"
+      description: "배치별 개별 스타일 재정의"
+      properties:
+        iconScale:
+          type: "number"
+          nullable: true
+          description: "크기 배율 (1.0 = 100%)"
+          example: 1.2
+        opacity:
+          type: "number"
+          nullable: true
+          description: "투명도 (0.0 ~ 1.0)"
+          example: 0.8
+        showLabel:
+          type: "boolean"
+          nullable: true
+          description: "라벨 표시 여부"
+          example: true
+        rotation:
+          type: "number"
+          nullable: true
+          description: "회전 각도 (도)"
+          example: 90
+        zOffset:
+          type: "number"
+          nullable: true
+          description: "3D 높이 오프셋"
+          example: 10.5
+
+    # --- 1. Site Schemas ---
+    SiteRequest:
+      type: "object"
+      required: ["name", "timezone"]
+      properties:
+        name:
+          type: "string"
+          description: "사이트명"
+          example: "판교 캠퍼스"
+        code:
+          type: "string"
+          description: "사이트 식별 코드"
+          example: "SITE-PANGYO"
+        description:
+          type: "string"
+          nullable: true
+          description: "사이트 설명"
+          example: "판교 테크노밸리 본사 캠퍼스"
+        address:
+          type: "string"
+          nullable: true
+          description: "사이트 주소"
+          example: "경기도 성남시 분당구 판교역로 123"
+        timezone:
+          type: "string"
+          description: "사이트의 로컬 타임존 (필수)"
+          example: "Asia/Seoul"
+          default: "Asia/Seoul"
+
+    Site:
+      type: "object"
+      properties:
+        id:
           type: "string"
           format: "uuid"
-        deviceName:
+          description: "사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        name:
           type: "string"
-          description: "장비명"
-          example: "정문 입실 리더기"
-        deviceCode:
+          description: "사이트명"
+          example: "판교 캠퍼스"
+        code:
           type: "string"
-          description: "장비 코드"
-          example: "DEV-READER-001"
-        deviceType:
+          description: "사이트 식별 코드"
+          example: "SITE-PANGYO"
+        description:
           type: "string"
-          enum: ["ACU", "READER", "CONTROLLER", "CAMERA", "SENSOR"]
-          description: "장비 타입 (ACU, READER, CONTROLLER, CAMERA, SENSOR)"
-        deviceRole:
+          nullable: true
+          description: "사이트 설명"
+          example: "판교 테크노밸리 본사 캠퍼스"
+        address:
           type: "string"
-          enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
-          description: "이 출입 지점에서의 역할"
-        portIndex:
-          type: "integer"
-          description: "연결 포트 번호" 
-        authenticationMode:
+          nullable: true
+          description: "사이트 주소"
+          example: "경기도 성남시 분당구 판교역로 123"
+        timezone:
           type: "string"
-          description: | 
-            해당 리더기에서 사용할 인증 조합 모드.<br>
-            반드시 해당 장비가 지원하는 기능(Capability) 내에서 설정해야 합니다.
-          enum: 
-            - "CARD_ONLY"
-            - "PIN_ONLY"
-            - "BIOMETRIC_ONLY"
-            - "MOBILE_ONLY"
-            - "QR_ONLY"
-            - "FACE_ONLY"
-            - "CARD_AND_PIN"
-            - "CARD_AND_BIOMETRIC"
-            - "CARD_AND_MOBILE"
-            - "CARD_AND_QR"
-            - "CARD_AND_FACE"
-            - "CARD_OR_PIN"
-            - "CARD_OR_BIOMETRIC"
-            - "CARD_OR_MOBILE"
-            - "CARD_OR_QR"
-            - "CARD_OR_FACE"
+          description: "사이트 타임존"
+          example: "Asia/Seoul"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          description: "수정 일시"
+          example: "2023-10-02T15:30:00Z"
 
-    AccessPointRequest:
+    # --- 2. Facility Schemas ---
+    FacilityRequest:
       type: "object"
-      required: ["name", "type", "securityConfig"]
-      description: |
-        출입 지점 생성/수정 요청 객체.<br>
-        `siteId`, `facilityId`, `sectorId`, `areaId` 중 하나를 선택하여 공간을 지정합니다.<br>
-        **보안 설정(Security Config):** <br>
-        - **보안 임계값(Threshold):** ID 참조와 직접 값 입력을 모두 지원하는 하이브리드 방식입니다. ID가 입력되면 ID의 정책을 따르고, ID가 없으면 직접 입력된 값(Level)을 사용합니다.<br>
-        - **인증 규칙(Authentication):** 오직 ID 참조만 가능합니다. (직접 입력 불가)
+      required: ["name", "type"]
       properties:
         siteId:
           type: "string"
           format: "uuid"
           nullable: true
-          description: "소속 사이트 ID (선택)"
+          description: "소속 사이트 ID (없으면 독립 시설물)"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        name:
+          type: "string"
+          description: "시설물명"
+          example: "본관"
+        code:
+          type: "string"
+          description: "시설물 코드"
+          example: "FAC-MAIN"
+        description:
+          type: "string"
+          nullable: true
+          description: "시설물 설명"
+          example: "메인 오피스 빌딩"
+        type:
+          type: "string"
+          enum: ["BUILDING", "OUTDOOR"]
+          description: "시설물 타입 (건물, 야외)"
+          example: "BUILDING"
+        boundaryCoordinates:
+          $ref: "#/components/schemas/FacilityBoundary"
+
+    Facility:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        siteId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        siteCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트 코드"
+          example: "SITE-PANGYO"
+        siteName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트명"
+          example: "판교 캠퍼스"
+        name:
+          type: "string"
+          description: "시설물명"
+          example: "본관"
+        code:
+          type: "string"
+          description: "시설물 코드"
+          example: "FAC-MAIN"
+        description:
+          type: "string"
+          nullable: true
+          description: "시설물 설명"
+          example: "메인 오피스 빌딩"
+        type:
+          type: "string"
+          description: "시설물 타입"
+          example: "BUILDING"
+        boundaryCoordinates:
+          $ref: "#/components/schemas/FacilityBoundary"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+
+    # --- 3. Sector Schemas ---
+    SectorRequest:
+      type: "object"
+      required: ["name", "type"]
+      properties:
         facilityId:
           type: "string"
           format: "uuid"
           nullable: true
-          description: "소속 시설물 ID (선택)"
+          description: "소속 시설물 ID (없으면 독립 구획)"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        name:
+          type: "string"
+          description: "구획명"
+          example: "1F"
+        code:
+          type: "string"
+          description: "구획 코드"
+          example: "SEC-1F"
+        description:
+          type: "string"
+          nullable: true
+          description: "구획 설명"
+          example: "1층 로비 및 안내데스크"
+        type:
+          type: "string"
+          enum: ["FLOOR", "SECTION"]
+          description: "구획 타입 (FLOOR: 층, SECTION: 평면 구획)"
+          example: "FLOOR"
+        sortOrder:
+          type: "integer"
+          description: "정렬 순서 (층수 등)"
+          example: 1
+
+    Sector:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        siteId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        siteCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트 코드"
+          example: "SITE-PANGYO"
+        siteName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트명"
+          example: "판교 캠퍼스"
+        facilityId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        facilityCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 시설물 코드"
+          example: "FAC-MAIN"
+        facilityName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 시설물명"
+          example: "본관"
+        name:
+          type: "string"
+          description: "구획명"
+          example: "1F"
+        code:
+          type: "string"
+          description: "구획 코드"
+          example: "SEC-1F"
+        description:
+          type: "string"
+          nullable: true
+          description: "구획 설명"
+          example: "1층 로비 및 안내데스크"
+        type:
+          type: "string"
+          description: "구획 타입"
+          example: "FLOOR"
+        sortOrder:
+          type: "integer"
+          description: "정렬 순서"
+          example: 1
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+
+    # --- 4. Area Schemas ---
+    AreaRequest:
+      type: "object"
+      required: ["name", "type"]
+      properties:
         sectorId:
           type: "string"
           format: "uuid"
           nullable: true
-          description: "소속 구획(층(Floore), 평면 구역(Section)) ID (선택)"
-        sectorInfo:
-          type: "object"
-          nullable: true
-          description: "소속 구획(층(Floore), 평면 구역(Section)) 정보 (직접 입력용, 선택 사항)"
-          properties:
-            name:
-              type: "string"
-              description: "구획(Floore), 평면 구역(Section)명"
-            description:
-              type: "string"
-              description: "구획(Floore), 평면 구역(Section) 설명"
-        areaId:
-          type: "string"
-          format: "uuid"
-          nullable: true
-          description: "소속 구역 ID (선택)"
+          description: "소속 구획 ID (없으면 독립 구역)"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
         name:
           type: "string"
-        description:
-          type: "string"
+          description: "구역명"
+          example: "보안구역 A"
         code:
           type: "string"
+          description: "구역 코드"
+          example: "AREA-SEC-A"
+        description:
+          type: "string"
+          nullable: true
+          description: "구역 설명"
+          example: "서버실 및 관제실 구역"
         type:
           type: "string"
-          enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
-          default: "DOOR"
-        fromAreaId:
-          type: "string"
-          format: "uuid"
-          nullable: true
-        toAreaId:
-          type: "string"
-          format: "uuid"
-          nullable: true
-        config:
-          type: "object"
-          nullable: true
-          description: "하드웨어 제어 설정 (개방 시간 등)"
-        securityConfig:
-          type: "object"
-          properties:
-            # --- [보안 설정 - 입실 (Entry)] ---
-            entrySecurityThresholdId:
-              type: "string"
-              format: "uuid"
-              nullable: true
-              description: "[하이브리드] 입실 보안 임계값 ID (우선 적용)"
-            entryAccessLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 입실 출입 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
-            entryAntipassbackLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 입실 안티패스백 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
-            entryArmingLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 입실 경비(Arming) 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
+          enum: ["GENERAL", "SECURITY", "FIRE", "RESTRICTED", "PARKING"]
+          description: "구역 타입 (일반, 보안, 화재, 제한, 주차)"
+          example: "SECURITY"
+        coordinates:
+          $ref: "#/components/schemas/AreaCoordinates"
 
-            # --- [보안 설정 - 퇴실 (Exit)] ---
-            exitSecurityThresholdId:
-              type: "string"
-              format: "uuid"
-              nullable: true
-              description: "[하이브리드] 퇴실 보안 임계값 ID (우선 적용)"
-            exitAccessLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 퇴실 출입 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
-            exitAntipassbackLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 퇴실 안티패스백 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
-            exitArmingLevel:
-              type: "integer"
-              nullable: true
-              default: 0
-              minimum: 0
-              description: "[하이브리드] 퇴실 경비(Arming) 레벨 직접 지정 (ID 미지정 시 적용, 미입력 시 0)"
-        devices:
-          type: "array"
-          description: "출입 포인트 생성 시 연결할 장비 목록"
-          items:
-            $ref: "#/components/schemas/AccessPointDeviceRequest"
-
-    AccessPointConfig:
+    Area:
       type: "object"
-      description: "출입 지점의 보안 정책 설정 정보 (하이브리드 지원)"
       properties:
-        
-        # --- [입실] ---
-        entrySecurityThresholdId:
+        id:
           type: "string"
           format: "uuid"
-          description: "입실 보안 임계값 ID"
-          nullable: true
-        entryAccessLevel:
-          type: "integer"
-          description: "입실 출입 레벨"
-          nullable: true
-        entryAntipassbackLevel:
-          type: "integer"
-          description: "입실 안티패스백 레벨"
-          nullable: true
-        entryArmingLevel:
-          type: "integer"
-          description: "입실 경비 레벨"
-          nullable: true
-        
-        # --- [퇴실] ---
-        exitSecurityThresholdId:
+          description: "구역 ID"
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
+        siteId:
           type: "string"
           format: "uuid"
-          description: "퇴실 보안 임계값 ID"
           nullable: true
-        exitAccessLevel:
+          description: "소속 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        siteCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트 코드"
+          example: "SITE-PANGYO"
+        siteName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 사이트명"
+          example: "판교 캠퍼스"
+        facilityId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        facilityCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 시설물 코드"
+          example: "FAC-MAIN"
+        facilityName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 시설물명"
+          example: "본관"
+        sectorId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "소속 구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        sectorCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 구획 코드"
+          example: "SEC-1F"
+        sectorName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "소속 구획명"
+          example: "1F"
+        name:
+          type: "string"
+          description: "구역명"
+          example: "보안구역 A"
+        code:
+          type: "string"
+          description: "구역 코드"
+          example: "AREA-SEC-A"
+        description:
+          type: "string"
+          nullable: true
+          description: "구역 설명"
+          example: "서버실 및 관제실 구역"
+        type:
+          type: "string"
+          description: "구역 타입"
+          example: "SECURITY"
+        coordinates:
+          $ref: "#/components/schemas/AreaCoordinates"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+
+    # --- 5. Access Point Schemas ---
+    AccessPointDevice:
+      type: "object"
+      description: "출입 지점에 연결된 장비 정보 (응답용)"
+      properties:
+        deviceId:
+          type: "string"
+          format: "uuid"
+          description: "장비 ID"
+          example: "e5f6a7b8-c9d0-1234-5678-901234efabcd"
+        deviceName:
+          type: "string"
+          description: "장비명"
+          example: "1층 메인 리더기"
+        deviceCode:
+          type: "string"
+          description: "장비 코드"
+          example: "DEV-RDR-001"
+        deviceType:
+          type: "string"
+          description: "장비 타입"
+          example: "READER"
+        deviceRole:
+          type: "string"
+          enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
+          description: "장비 역할"
+          example: "ENTRY"
+        portIndex:
           type: "integer"
-          description: "퇴실 출입 레벨"
-          nullable: true
-        exitAntipassbackLevel:
-          type: "integer"
-          description: "퇴실 안티패스백 레벨"
-          nullable: true
-        exitArmingLevel:
-          type: "integer"
-          description: "퇴실 경비 레벨"
-          nullable: true
+          description: "연결 포트 번호"
+          example: 1
+        authenticationMode:
+          type: "string"
+          description: "설정된 인증 모드"
+          example: "CARD_AND_PIN"
 
     AccessPointType:
       type: "object"
       properties:
         code:
           type: "string"
-          description: "출입 포인트 타입 코드 (DB 저장 값)"
+          description: "타입 코드"
           example: "DOOR"
         label:
           type: "string"
-          description: "화면 표시용 라벨"
+          description: "타입 라벨"
           example: "일반 출입문"
 
-    AccessPoint:
+    AccessPointRequest:
       type: "object"
+      required: ["name", "type", "securityConfig"]
       properties:
-        id:
-          type: "string"
-          format: "uuid"
         siteId:
           type: "string"
           format: "uuid"
+          nullable: true
           description: "소속 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
         facilityId:
           type: "string"
           format: "uuid"
+          nullable: true
           description: "소속 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
         sectorId:
           type: "string"
           format: "uuid"
+          nullable: true
           description: "소속 구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        sectorName:
+          type: "string"
+          description: "층(Floor), 섹션(Section)명"
+          example: "1F"
+        sectorDescription:
+          type: "string"
+          description: "층(Floor), 섹션(Section) 설명"        
+          example: "1층 로비 및 안내데스크"    
         areaId:
           type: "string"
           format: "uuid"
+          nullable: true
           description: "소속 구역 ID"
-        siteName:
-          type: "string"
-          description: "[Read-Only] 소속 사이트명"
-          example: "본사 캠퍼스"
-          readOnly: true
-        facilityName:
-          type: "string"
-          description: "[Read-Only] 소속 시설물명"
-          example: "본관 빌딩"
-          readOnly: true
-        sectorName:
-          type: "string"
-          description: "[Read-Only] 소속 구획명"
-          example: "3F"
-          readOnly: true
-        areaName:
-          type: "string"
-          description: "[Read-Only] 소속 구역명"
-          example: "보안구역 A"
-          readOnly: true
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
         name:
           type: "string"
+          description: "출입 포인트명"
           example: "본관 1층 정문"
         description:
           type: "string"
-          example: "본관 빌딩 1층에 위치한 주요 출입문"
+          description: "설명"
+          example: "주 출입구 게이트"
         code:
           type: "string"
+          description: "출입 포인트 코드"
           example: "AP-ENT-001"
         type:
           type: "string"
           enum: ["DOOR", "GATE_DOOR", "TURNSTILE", "ELEVATOR", "SPEED_GATE", "BARRIER", "SLIDING", "SHUTTER", "BOLLARD"]
+          description: "출입 포인트 타입"
+          example: "DOOR"
         fromAreaId:
           type: "string"
           format: "uuid"
-          description: "진입 전 구역 ID (안티패스백용)"
+          nullable: true
+          description: "진입 전 구역 ID (안티패스백)"
+          example: "f0e1d2c3-b4a5-9687-0912-345678abcdef"
         toAreaId:
           type: "string"
           format: "uuid"
-          description: "진입 후 구역 ID (안티패스백용)"
+          nullable: true
+          description: "진입 후 구역 ID (안티패스백)"
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
         config:
-          type: "object"
-          description: "하드웨어 제어 관련 설정 (개방 시간, 릴레이 등)"
+          $ref: "#/components/schemas/AccessPointHardwareConfig"
         securityConfig:
           $ref: "#/components/schemas/AccessPointConfig"
-          description: "적용된 보안 정책 정보 (등급, 인증 규칙 등)"
         devices:
           type: "array"
+          description: "연결할 장비 목록"
           items:
-            $ref: "#/components/schemas/AccessPointDevice"
-          description: "연결된 물리적 장비 목록"
-        isActive:
-          type: "boolean"
-        createdAt:
-          type: "string"
-          format: "date-time"
-        updatedAt:
-          type: "string"
-          format: "date-time"
+            $ref: "#/components/schemas/AccessPointDeviceRequest"
 
     AccessPointDeviceRequest:
       type: "object"
@@ -631,36 +916,1651 @@ components:
         deviceId:
           type: "string"
           format: "uuid"
-          description: "연결할 장비 ID"
+          description: "장비 ID"
+          example: "e5f6a7b8-c9d0-1234-5678-901234efabcd"
         deviceRole:
           type: "string"
           enum: ["ENTRY", "EXIT", "CONTROLLER", "SENSOR"]
-          description: |
-            장비의 역할 (입실 리더기, 퇴실 리더기, 컨트롤러 등)<br>
-            ENTRY는 from->to 정방향, EXIT는 to->from 역방향 이동을 유발합니다.
+          description: "장비 역할"
+          example: "ENTRY"
         portIndex:
           type: "integer"
-          description: "컨트롤러 연결 포트 번호 (선택 사항)"
+          description: "연결 포트 번호"
+          example: 1
         authenticationMode:
           type: "string"
-          description: | 
-            해당 리더기에서 사용할 인증 조합 모드.<br>
-            반드시 해당 장비가 지원하는 기능(Capability) 내에서 설정해야 합니다.
-          enum: 
-            - "CARD_ONLY"
-            - "PIN_ONLY"
-            - "BIOMETRIC_ONLY"
-            - "MOBILE_ONLY"
-            - "QR_ONLY"
-            - "FACE_ONLY"
-            - "CARD_AND_PIN"
-            - "CARD_AND_BIOMETRIC"
-            - "CARD_AND_MOBILE"
-            - "CARD_AND_QR"
-            - "CARD_AND_FACE"
-            - "CARD_OR_PIN"
-            - "CARD_OR_BIOMETRIC"
-            - "CARD_OR_MOBILE"
-            - "CARD_OR_QR"
-            - "CARD_OR_FACE"
-            
+          description: "인증 모드 (리더기인 경우)"
+          example: "CARD_ONLY"
+
+    AccessPointConfig:
+      type: "object"
+      properties:
+        entrySecurityThresholdId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          example: "12345678-1234-1234-1234-1234567890ab"
+        entryAccessLevel:
+          type: "integer"
+          nullable: true
+          example: 1
+        entryAntipassbackLevel:
+          type: "integer"
+          nullable: true
+          example: 0
+        entryArmingLevel:
+          type: "integer"
+          nullable: true
+          example: 0
+        exitSecurityThresholdId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          example: "12345678-1234-1234-1234-1234567890ab"
+        exitAccessLevel:
+          type: "integer"
+          nullable: true
+          example: 1
+        exitAntipassbackLevel:
+          type: "integer"
+          nullable: true
+          example: 0
+        exitArmingLevel:
+          type: "integer"
+          nullable: true
+          example: 0
+
+    AccessPoint:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "출입 포인트 ID"
+          example: "e5f6a7b8-c9d0-1234-5678-901234efabcd"
+        siteId:
+          type: "string"
+          format: "uuid"
+          description: "소속 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        siteCode:
+          type: "string"
+          readOnly: true
+          description: "소속 사이트 코드"
+          example: "SITE-PANGYO"
+        siteName:
+          type: "string"
+          readOnly: true
+          description: "소속 사이트명"
+          example: "판교 캠퍼스"
+        facilityId:
+          type: "string"
+          format: "uuid"
+          description: "소속 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        facilityCode:
+          type: "string"
+          readOnly: true
+          description: "소속 시설물 코드"
+          example: "FAC-MAIN"
+        facilityName:
+          type: "string"
+          description: "소속 시설물명"
+          example: "본관"
+        sectorId:
+          type: "string"
+          format: "uuid"
+          description: "소속 구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        sectorCode:
+          type: "string"
+          readOnly: true
+          description: "소속 구획 코드"
+          example: "SEC-1F"
+        sectorName:
+          type: "string"
+          readOnly: true
+          description: "소속 구획명"
+          example: "1F"
+        areaId:
+          type: "string"
+          format: "uuid"
+          description: "소속 구역 ID"
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
+        areaCode:
+          type: "string"
+          readOnly: true
+          description: "소속 구역 코드"
+          example: "AREA-SEC-A"
+        areaName:
+          type: "string"
+          readOnly: true
+          description: "소속 구역명"
+          example: "보안구역 A"
+        name:
+          type: "string"
+          description: "출입 포인트명"
+          example: "본관 1층 정문"
+        description:
+          type: "string"
+          description: "설명"
+          example: "주 출입구 게이트"
+        code:
+          type: "string"
+          description: "출입 포인트 코드"
+          example: "AP-ENT-001"
+        type:
+          type: "string"
+          description: "타입"
+          example: "DOOR"
+        config:
+          $ref: "#/components/schemas/AccessPointHardwareConfig"
+        securityConfig:
+          $ref: "#/components/schemas/AccessPointConfig"
+        devices:
+          type: "array"
+          description: "연결된 장비 목록"
+          items:
+            $ref: "#/components/schemas/AccessPointDevice"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+        updatedAt:
+          type: "string"
+          format: "date-time"
+          description: "수정 일시"
+          example: "2023-10-02T15:30:00Z"
+
+    # --- 6, 7. Map Schemas ---
+    MapViewRequest:
+      type: "object"
+      required: ["name", "mapType"]
+      properties:
+        targetSiteId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "매핑 대상 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        targetFacilityId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "매핑 대상 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        targetSectorId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "매핑 대상 구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        targetAreaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "매핑 대상 구역 ID"
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
+        name:
+          type: "string"
+          description: "맵 뷰명"
+          example: "1층 전체 도면"
+        description:
+          type: "string"
+          nullable: true
+          description: "설명"
+          example: "1층 평면도 및 기기 배치"
+        mapType:
+          type: "string"
+          enum: ["2D", "3D"]
+          description: "맵 타입"
+          example: "2D"
+        imageUrl:
+          type: "string"
+          format: "uri"
+          nullable: true
+          description: "2D 도면 이미지 URL"
+          example: "https://cdn.example.com/maps/floor1.png"
+        modelUrl:
+          type: "string"
+          format: "uri"
+          nullable: true
+          description: "3D 모델 파일 URL"
+          example: "https://cdn.example.com/models/floor1.glb"
+        config:
+          $ref: "#/components/schemas/MapViewConfig"
+
+    MapView:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "맵 뷰 ID"
+          example: "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+        targetSiteId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "대상 사이트 ID"
+          example: "a1b2c3d4-e5f6-7890-1234-567890abcdef"
+        targetSiteName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 사이트명"
+          example: "판교 캠퍼스"
+        targetSiteCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 사이트 코드"
+          example: "SITE-PANGYO"
+        targetFacilityId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "대상 시설물 ID"
+          example: "b2c3d4e5-f6a7-8901-2345-678901bcdefa"
+        targetFacilityName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 시설물명"
+          example: "본관"
+        targetFacilityCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 시설물 코드"
+          example: "FAC-MAIN"
+        targetSectorId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "대상 구획 ID"
+          example: "c3d4e5f6-a7b8-9012-3456-789012cdefab"
+        targetSectorName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 구획명"
+          example: "1F"
+        targetSectorCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 구획 코드"
+          example: "SEC-1F"
+        targetAreaId:
+          type: "string"
+          format: "uuid"
+          nullable: true
+          description: "대상 구역 ID"
+          example: "d4e5f6a7-b8c9-0123-4567-890123defabc"
+        targetAreaName:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 구역명"
+          example: "보안구역 A"
+        targetAreaCode:
+          type: "string"
+          nullable: true
+          readOnly: true
+          description: "대상 구역 코드"
+          example: "AREA-SEC-A"
+        name:
+          type: "string"
+          description: "맵 뷰명"
+          example: "1층 전체 도면"
+        description:
+          type: "string"
+          description: "설명"
+          example: "1층 평면도 및 기기 배치"
+        mapType:
+          type: "string"
+          description: "맵 타입"
+          example: "2D"
+        imageUrl:
+          type: "string"
+          description: "이미지 URL"
+          example: "https://cdn.example.com/maps/floor1.png"
+        modelUrl:
+          type: "string"
+          description: "모델 URL"
+          example: "https://cdn.example.com/models/floor1.glb"
+        config:
+          $ref: "#/components/schemas/MapViewConfig"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+        createdAt:
+          type: "string"
+          format: "date-time"
+          description: "생성 일시"
+          example: "2023-10-01T12:00:00Z"
+
+    MapItemRequest:
+      type: "object"
+      required: ["name", "targetType", "targetId"]
+      properties:
+        targetId:
+          type: "string"
+          format: "uuid"
+          description: "연결된 실제 객체(장비, 문 등) ID"
+          example: "e5f6a7b8-c9d0-1234-5678-901234efabcd"
+        targetType:
+          type: "string"
+          enum: ["ACCESS_POINT", "DEVICE", "AREA", "CAMERA"]
+          description: "대상 타입"
+          example: "DEVICE"
+        name:
+          type: "string"
+          description: "아이템명"
+          example: "정문 카메라 아이콘"
+        description:
+          type: "string"
+          nullable: true
+          description: "설명"
+          example: "감시용 카메라 아이콘"
+        # [추가] 커스텀 아이콘 지원
+        imageUrl:
+          type: "string"
+          format: "uri"
+          nullable: true
+          description: "커스텀 아이콘 이미지 URL (iconStyle 대신 사용 가능)"
+          example: "https://cdn.example.com/icons/my-camera.png"
+        # [추가] 3D 모델 지원
+        modelUrl:
+          type: "string"
+          format: "uri"
+          nullable: true
+          description: "3D 모델 파일 URL (3D 맵용, .glb 등)"
+          example: "https://cdn.example.com/models/camera.glb"
+        iconStyle:
+          $ref: "#/components/schemas/MapItemIconStyle"
+
+    MapItem:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "맵 아이템 ID"
+          example: "f6a7b8c9-d0e1-2345-6789-012345abcdef"
+        targetId:
+          type: "string"
+          format: "uuid"
+          description: "대상 객체 ID"
+          example: "e5f6a7b8-c9d0-1234-5678-901234efabcd"
+        targetType:
+          type: "string"
+          description: "대상 타입"
+          example: "DEVICE"
+        name:
+          type: "string"
+          description: "아이템명"
+          example: "정문 카메라 아이콘"
+        description:
+          type: "string"
+          description: "설명"
+          example: "감시용 카메라 아이콘"
+        imageUrl:
+          type: "string"
+          nullable: true
+          description: "커스텀 아이콘 이미지 URL"
+          example: "https://cdn.example.com/icons/my-camera.png"
+        modelUrl:
+          type: "string"
+          nullable: true
+          description: "3D 모델 파일 URL"
+          example: "https://cdn.example.com/models/camera.glb"
+        iconStyle:
+          $ref: "#/components/schemas/MapItemIconStyle"
+        isActive:
+          type: "boolean"
+          description: "활성 여부"
+          example: true
+
+    MapViewItemRequest:
+      type: "object"
+      required: ["mapItemId"]
+      properties:
+        mapItemId:
+          type: "string"
+          format: "uuid"
+          description: "배치할 맵 아이템 ID"
+          example: "f6a7b8c9-d0e1-2345-6789-012345abcdef"
+        positionX:
+          type: "number"
+          default: 0
+          description: "X 좌표"
+          example: 100.5
+        positionY:
+          type: "number"
+          default: 0
+          description: "Y 좌표"
+          example: 200.5
+        positionZ:
+          type: "number"
+          default: 0
+          description: "Z 좌표 (3D용)"
+          example: 0
+        rotationX:
+          type: "number"
+          default: 0
+          description: "X축 회전"
+          example: 0
+        rotationY:
+          type: "number"
+          default: 0
+          description: "Y축 회전"
+          example: 45
+        rotationZ:
+          type: "number"
+          default: 0
+          description: "Z축 회전"
+          example: 0
+        scaleX:
+          type: "number"
+          default: 1.0
+          description: "X축 스케일"
+          example: 1.0
+        scaleY:
+          type: "number"
+          default: 1.0
+          description: "Y축 스케일"
+          example: 1.0
+        scaleZ:
+          type: "number"
+          default: 1.0
+          description: "Z축 스케일"
+          example: 1.0
+        overrideStyle:
+          $ref: "#/components/schemas/MapViewItemOverrideStyle"
+
+    MapViewItem:
+      type: "object"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+          description: "배치된 아이템 ID"
+          example: "01234567-89ab-cdef-0123-456789abcdef"
+        mapViewId:
+          type: "string"
+          format: "uuid"
+          description: "소속 맵 뷰 ID"
+          example: "f1e2d3c4-b5a6-7890-1234-567890abcdef"
+        mapItemId:
+          type: "string"
+          format: "uuid"
+          description: "맵 아이템 ID"
+          example: "f6a7b8c9-d0e1-2345-6789-012345abcdef"
+        mapItem:
+          $ref: "#/components/schemas/MapItem"
+        positionX:
+          type: "number"
+          description: "X 좌표"
+          example: 100.5
+        positionY:
+          type: "number"
+          description: "Y 좌표"
+          example: 200.5
+        positionZ:
+          type: "number"
+          description: "Z 좌표"
+          example: 0
+        rotationX:
+          type: "number"
+          description: "X축 회전"
+          example: 0
+        rotationY:
+          type: "number"
+          description: "Y축 회전"
+          example: 45
+        rotationZ:
+          type: "number"
+          description: "Z축 회전"
+          example: 0
+        scaleX:
+          type: "number"
+          description: "X축 스케일"
+          example: 1.0
+        scaleY:
+          type: "number"
+          description: "Y축 스케일"
+          example: 1.0
+        scaleZ:
+          type: "number"
+          description: "Z축 스케일"
+          example: 1.0
+        overrideStyle:
+          $ref: "#/components/schemas/MapViewItemOverrideStyle"
+
+security:
+  - bearerAuth: []
+
+paths:
+  # ==========================================
+  # 1. Site Management
+  # ==========================================
+  /sites:
+    get:
+      tags: ["1. Site Management"]
+      summary: "사이트 목록 조회"
+      parameters:
+        - name: "name"
+          in: "query"
+          description: "사이트명 검색"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "사이트 코드 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "사이트 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          description: "활성 여부 필터"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          description: "페이지 번호"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          description: "페이지 사이즈"
+          schema:
+            type: "integer"
+            default: 20
+        - name: "sort"
+          in: "query"
+          description: "정렬"
+          schema:
+            type: "array"
+            items:
+              type: "string"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Site"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["1. Site Management"]
+      summary: "사이트 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+
+  /sites/{id}:
+    get:
+      tags: ["1. Site Management"]
+      summary: "사이트 상세 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+    put:
+      tags: ["1. Site Management"]
+      summary: "사이트 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SiteRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Site"
+    delete:
+      tags: ["1. Site Management"]
+      summary: "사이트 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 2. Facility Management
+  # ==========================================
+  /facilities:
+    get:
+      tags: ["2. Facility Management"]
+      summary: "시설물 목록 조회"
+      parameters:
+        - name: "siteId"
+          in: "query"
+          description: "소속 사이트 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        # [추가] 상위 속성 검색 조건 (name, code)
+        - name: "siteName"
+          in: "query"
+          description: "소속 사이트명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "siteCode"
+          in: "query"
+          description: "소속 사이트 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "name"
+          in: "query"
+          description: "시설물명 검색"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "시설물 코드 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "시설물 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "type"
+          in: "query"
+          description: "시설물 타입 필터"
+          schema:
+            type: "string"
+            enum: ["BUILDING", "OUTDOOR"]
+        - name: "isActive"
+          in: "query"
+          description: "활성 여부 필터"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          description: "페이지 번호"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          description: "페이지 사이즈"
+          schema:
+            type: "integer"
+            default: 20
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Facility"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["2. Facility Management"]
+      summary: "시설물 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FacilityRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Facility"
+
+  /facilities/{id}:
+    get:
+      tags: ["2. Facility Management"]
+      summary: "시설물 상세 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Facility"
+    put:
+      tags: ["2. Facility Management"]
+      summary: "시설물 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/FacilityRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Facility"
+    delete:
+      tags: ["2. Facility Management"]
+      summary: "시설물 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 3. Sector Management
+  # ==========================================
+  /sectors:
+    get:
+      tags: ["3. Sector Management"]
+      summary: "구획(층) 목록 조회"
+      parameters:
+        - name: "facilityId"
+          in: "query"
+          description: "소속 시설물 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        # [추가] 상위 속성 검색 조건
+        - name: "facilityName"
+          in: "query"
+          description: "소속 시설물명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "facilityCode"
+          in: "query"
+          description: "소속 시설물 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "name"
+          in: "query"
+          description: "구획명 검색"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "구획 코드 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "구획 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "type"
+          in: "query"
+          description: "구획 타입 필터"
+          schema:
+            type: "string"
+            enum: ["FLOOR", "SECTION"]
+        - name: "page"
+          in: "query"
+          description: "페이지 번호"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          description: "페이지 사이즈"
+          schema:
+            type: "integer"
+            default: 20
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Sector"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["3. Sector Management"]
+      summary: "구획 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+
+  /sectors/{id}:
+    put:
+      tags: ["3. Sector Management"]
+      summary: "구획 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SectorRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Sector"
+    delete:
+      tags: ["3. Sector Management"]
+      summary: "구획 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 4. Area Management
+  # ==========================================
+  /areas:
+    get:
+      tags: ["4. Area Management"]
+      summary: "구역 목록 조회"
+      parameters:
+        - name: "sectorId"
+          in: "query"
+          description: "소속 구획 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        # [추가] 상위 속성 검색 조건
+        - name: "sectorName"
+          in: "query"
+          description: "소속 구획명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "sectorCode"
+          in: "query"
+          description: "소속 구획 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "name"
+          in: "query"
+          description: "구역명 검색"
+          schema:
+            type: "string"
+        - name: "code"
+          in: "query"
+          description: "구역 코드 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "구역 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "type"
+          in: "query"
+          description: "구역 타입 필터"
+          schema:
+            type: "string"
+            enum: ["GENERAL", "SECURITY", "FIRE", "RESTRICTED", "PARKING"]
+        - name: "page"
+          in: "query"
+          description: "페이지 번호"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          description: "페이지 사이즈"
+          schema:
+            type: "integer"
+            default: 20
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/Area"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["4. Area Management"]
+      summary: "구역 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AreaRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Area"
+
+  /areas/{id}:
+    put:
+      tags: ["4. Area Management"]
+      summary: "구역 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AreaRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Area"
+    delete:
+      tags: ["4. Area Management"]
+      summary: "구역 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 5. Access Point Management
+  # ==========================================
+  /access-points:
+    get:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 목록 조회"
+      parameters:
+        - name: "siteId"
+          in: "query"
+          description: "소속 사이트 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        # [추가] 상위 속성 검색 조건
+        - name: "siteName"
+          in: "query"
+          description: "소속 사이트명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "siteCode"
+          in: "query"
+          description: "소속 사이트 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "facilityId"
+          in: "query"
+          description: "소속 시설물 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "facilityName"
+          in: "query"
+          description: "소속 시설물명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "facilityCode"
+          in: "query"
+          description: "소속 시설물 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "sectorId"
+          in: "query"
+          description: "소속 구획 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "sectorName"
+          in: "query"
+          description: "소속 구획명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "sectorCode"
+          in: "query"
+          description: "소속 구획 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "areaId"
+          in: "query"
+          description: "소속 구역 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "areaName"
+          in: "query"
+          description: "소속 구역명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "areaCode"
+          in: "query"
+          description: "소속 구역 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "name"
+          in: "query"
+          description: "출입 포인트명 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "출입 포인트 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "type"
+          in: "query"
+          description: "출입 포인트 타입 필터"
+          schema:
+            type: "string"
+        - name: "isActive"
+          in: "query"
+          description: "활성 여부 필터"
+          schema:
+            type: "boolean"
+        - name: "page"
+          in: "query"
+          description: "페이지 번호"
+          schema:
+            type: "integer"
+            default: 0
+        - name: "size"
+          in: "query"
+          description: "페이지 사이즈"
+          schema:
+            type: "integer"
+            default: 20
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/AccessPoint"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessPointRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessPoint"
+        '409':
+          $ref: "#/components/responses/Conflict"
+
+  /access-points/types:
+    get:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 타입 목록 조회"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/AccessPointType"
+
+  /access-points/{id}:
+    get:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 단건 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessPoint"
+    put:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AccessPointRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AccessPoint"
+    delete:
+      tags: ["5. Access Point Management"]
+      summary: "출입 포인트 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 6. Map View Management
+  # ==========================================
+  /map-views:
+    get:
+      tags: ["6. Map View Management"]
+      summary: "맵 뷰 목록 조회"
+      parameters:
+        - name: "targetSiteId"
+          in: "query"
+          description: "대상 사이트 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        # [추가] 상위 속성 검색 조건
+        - name: "targetSiteName"
+          in: "query"
+          description: "대상 사이트명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "targetSiteCode"
+          in: "query"
+          description: "대상 사이트 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "targetFacilityId"
+          in: "query"
+          description: "대상 시설물 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "targetFacilityName"
+          in: "query"
+          description: "대상 시설물명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "targetFacilityCode"
+          in: "query"
+          description: "대상 시설물 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "targetSectorId"
+          in: "query"
+          description: "대상 구획 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "targetSectorName"
+          in: "query"
+          description: "대상 구획명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "targetSectorCode"
+          in: "query"
+          description: "대상 구획 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "targetAreaId"
+          in: "query"
+          description: "대상 구역 ID"
+          schema:
+            type: "string"
+            format: "uuid"
+        - name: "targetAreaName"
+          in: "query"
+          description: "대상 구역명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "targetAreaCode"
+          in: "query"
+          description: "대상 구역 코드 검색 (일치)"
+          schema:
+            type: "string"
+        - name: "name"
+          in: "query"
+          description: "맵 뷰명 검색"
+          schema:
+            type: "string"
+        # [추가] 설명 검색 조건
+        - name: "description"
+          in: "query"
+          description: "맵 뷰 설명 검색 (부분 일치)"
+          schema:
+            type: "string"
+        - name: "mapType"
+          in: "query"
+          description: "맵 타입 필터"
+          schema:
+            type: "string"
+            enum: ["2D", "3D"]
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "object"
+                properties:
+                  content:
+                    type: "array"
+                    items:
+                      $ref: "#/components/schemas/MapView"
+                  page:
+                    $ref: "#/components/schemas/PageMetadata"
+    post:
+      tags: ["6. Map View Management"]
+      summary: "맵 뷰 생성"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapViewRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapView"
+
+  /map-views/{id}:
+    get:
+      tags: ["6. Map View Management"]
+      summary: "맵 뷰 상세 조회"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapView"
+    put:
+      tags: ["6. Map View Management"]
+      summary: "맵 뷰 수정"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapViewRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapView"
+    delete:
+      tags: ["6. Map View Management"]
+      summary: "맵 뷰 삭제"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # ==========================================
+  # 7. Map Item Management (Placement)
+  # ==========================================
+  /map-view-items:
+    get:
+      tags: ["7. Map Item Management"]
+      summary: "배치된 맵 아이템 조회 (By MapView)"
+      parameters:
+        - name: "mapViewId"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/MapViewItem"
+    post:
+      tags: ["7. Map Item Management"]
+      summary: "맵 아이템 배치 (생성)"
+      description: "특정 Map View에 아이템을 배치합니다. (position, scale 등 포함)"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: "object"
+              required: ["mapViewId", "items"]
+              properties:
+                mapViewId:
+                  type: "string"
+                  format: "uuid"
+                items:
+                  type: "array"
+                  items:
+                    $ref: "#/components/schemas/MapViewItemRequest"
+      responses:
+        '200':
+          description: "배치됨"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/MapViewItem"
+
+  /map-view-items/{id}:
+    put:
+      tags: ["7. Map Item Management"]
+      summary: "배치된 아이템 수정 (이동/회전)"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapViewItemRequest"
+      responses:
+        '200':
+          description: "수정됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapViewItem"
+    delete:
+      tags: ["7. Map Item Management"]
+      summary: "배치된 아이템 삭제 (제거)"
+      parameters:
+        - name: "id"
+          in: "path"
+          required: true
+          schema:
+            type: "string"
+            format: "uuid"
+      responses:
+        '200':
+          description: "삭제 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/DeleteResult"
+
+  # (MapItem 메타데이터 CRUD도 필요하다면 추가 - 여기서는 배치 위주로 정의함)
+  /map-items:
+    get:
+      tags: ["7. Map Item Management"]
+      summary: "사용 가능한 맵 아이템 메타 목록 조회"
+      parameters:
+        - name: "targetType"
+          in: "query"
+          schema:
+            type: "string"
+            enum: ["ACCESS_POINT", "DEVICE", "AREA", "CAMERA"]
+      responses:
+        '200':
+          description: "성공"
+          content:
+            application/json:
+              schema:
+                type: "array"
+                items:
+                  $ref: "#/components/schemas/MapItem"
+    post:
+      tags: ["7. Map Item Management"]
+      summary: "맵 아이템 메타 등록"
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/MapItemRequest"
+      responses:
+        '200':
+          description: "생성됨"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/MapItem"
+
+  # [추가] 파일 업로드 엔드포인트
+  /map-views/upload:
+    post:
+      tags: ["6. Map View Management"]
+      summary: "맵 리소스(이미지/모델) 업로드"
+      description: |
+        맵 뷰 등록에 사용할 2D 도면 이미지나 3D 모델 파일을 업로드합니다.<br>
+        업로드 성공 시, 접근 가능한 URL을 반환합니다.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: "object"
+              properties:
+                file:
+                  type: "string"
+                  format: "binary"
+                  description: "업로드할 파일"
+      responses:
+        '200':
+          description: "업로드 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileUploadResponse"
+  
+  # [추가] 맵 아이템 이미지 업로드 엔드포인트
+  /map-items/upload:
+    post:
+      tags: ["7. Map Item Management"]
+      summary: "맵 아이템 아이콘 업로드"
+      description: |
+        커스텀 아이콘 이미지를 업로드합니다. (예: 장비 사진, 커스텀 마커 등)
+        업로드 성공 시, 접근 가능한 URL을 반환합니다.
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              type: "object"
+              properties:
+                file:
+                  type: "string"
+                  format: "binary"
+                  description: "업로드할 아이콘 파일"
+      responses:
+        '200':
+          description: "업로드 성공"
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/FileUploadResponse"
