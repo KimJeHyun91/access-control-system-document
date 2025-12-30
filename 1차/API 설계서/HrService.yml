@@ -9,7 +9,7 @@ info:
     name: "Jehyun Kim"
 
 servers:
-  - url: http://localhost:4200/api/v1/hr
+  - url: http://localhost:4300/api/v1/hr
     description: "로컬 개발 서버"
 
 tags:
